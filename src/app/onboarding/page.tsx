@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { WorkspaceForm } from "@/components/onboarding/workspace-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getCurrentUser } from "@/data/current-user";
@@ -14,7 +15,11 @@ export default async function OnboardingPage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/");
+    redirect("/login");
+  }
+
+  if (user.mustChangePassword) {
+    redirect("/change-password");
   }
 
   if (user.role !== AUTH_ROLES.DEMO_USER) {
@@ -39,7 +44,10 @@ export default async function OnboardingPage() {
           </span>
           <span>AHSO Warehouse</span>
         </div>
-        <ThemeToggle />
+        <div className="header-actions">
+          <ThemeToggle />
+          <SignOutButton />
+        </div>
       </header>
       <section className="onboarding-layout">
         <div className="onboarding-intro">
@@ -51,7 +59,12 @@ export default async function OnboardingPage() {
           </p>
         </div>
         <div className="onboarding-form-panel">
-          <WorkspaceForm email={user.email} />
+          <WorkspaceForm
+            name={user.name}
+            email={user.email}
+            phoneNumber={user.phoneNumber}
+            companyName={user.companyName}
+          />
         </div>
       </section>
     </main>

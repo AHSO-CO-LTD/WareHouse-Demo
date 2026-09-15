@@ -20,7 +20,7 @@ Use one TypeScript Next.js App Router application with PostgreSQL, Prisma 7 and 
 ## Rationale
 
 - Reduces deployment and operational complexity for a public demo.
-- Supports UI, server-side mutations, HTTP endpoints, OAuth and PDF generation in one application.
+- Supports UI, server-side mutations, HTTP endpoints, authentication and PDF generation in one application.
 - Avoids investing in production architecture before a signed customer's real constraints are known.
 
 ## Consequences

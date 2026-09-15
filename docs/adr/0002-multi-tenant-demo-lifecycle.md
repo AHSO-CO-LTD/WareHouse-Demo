@@ -1,6 +1,6 @@
 # ADR 0002 — Isolated Single-User Demo Workspaces
 
-- Status: Accepted
+- Status: Superseded by ADR 0005
 - Date: 15/09/2026
 
 ## Context
@@ -10,12 +10,12 @@ The demo is publicly accessible. Each registrant must be able to test the system
 ## Alternatives
 
 1. One shared sample workspace for all users.
-2. One isolated workspace per Google account.
+2. One isolated workspace per verified account.
 3. Multi-user organization workspaces with invitations.
 
 ## Decision
 
-- Create one isolated workspace for each verified Google account.
+- Create one isolated workspace for each verified account.
 - Do not support invitations or account linking inside a demo tenant.
 - Apply fixed quotas and a 30-day lifetime.
 - Lock the workspace on day 30 and purge tenant business data on day 37.

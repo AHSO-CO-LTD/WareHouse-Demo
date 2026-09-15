@@ -50,7 +50,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -61,7 +63,9 @@ a {
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible {
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--focus), transparent 35%);
   outline-offset: 3px;
 }
@@ -96,8 +100,7 @@ input:focus-visible {
   text-decoration: none;
 }
 
-.brand-mark,
-.google-mark {
+.brand-mark {
   display: inline-grid;
   flex: 0 0 auto;
   place-items: center;
@@ -135,6 +138,19 @@ input:focus-visible {
 .text-button:hover,
 .back-link:hover {
   color: var(--foreground);
+}
+
+.compact-button {
+  display: inline-flex;
+  min-height: 2.5rem;
+  align-items: center;
+  border: 1px solid var(--foreground);
+  border-radius: 0.4rem;
+  color: var(--foreground);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  padding: 0.5rem 0.9rem;
+  text-decoration: none;
 }
 
 .hero {
@@ -189,6 +205,12 @@ input:focus-visible {
   gap: 0.75rem;
 }
 
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .primary-button {
   display: inline-flex;
   min-height: 3.25rem;
@@ -228,13 +250,29 @@ input:focus-visible {
   margin-top: 0.5rem;
 }
 
-.google-mark {
-  width: 1.5rem;
-  height: 1.5rem;
-  border-radius: 0.25rem;
-  background: var(--accent-foreground);
-  color: var(--accent);
-  font-size: 0.8125rem;
+.secondary-button {
+  display: inline-flex;
+  min-height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  font-weight: 650;
+  padding: 0.75rem 1.25rem;
+  text-decoration: none;
+}
+
+.secondary-button:hover {
+  border-color: var(--foreground);
+  background: var(--surface-strong);
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .form-error {
@@ -242,6 +280,22 @@ input:focus-visible {
   color: var(--danger);
   font-size: 0.875rem;
   line-height: 1.45;
+}
+
+.sign-out-control {
+  position: relative;
+}
+
+.sign-out-control > .form-error {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: max-content;
+  max-width: min(18rem, calc(100vw - 2rem));
+  border: 1px solid var(--border);
+  background: var(--background);
+  padding: 0.5rem 0.625rem;
 }
 
 .hero-visual {
@@ -318,6 +372,11 @@ input:focus-visible {
   background: var(--surface);
 }
 
+.login-panel--wide {
+  width: min(100%, 44rem);
+  margin-block: clamp(2.5rem, 7vh, 5rem);
+}
+
 .login-panel h1 {
   font-size: clamp(2.25rem, 5vw, 3.5rem);
   font-weight: 620;
@@ -330,13 +389,19 @@ input:focus-visible {
   line-height: 1.6;
 }
 
-.platform-login-form,
+.auth-form,
 .field-group,
 .workspace-form {
   display: grid;
 }
 
-.platform-login-form {
+.auth-form {
+  gap: 1.1rem;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1.1rem;
 }
 
@@ -344,8 +409,24 @@ input:focus-visible {
   gap: 0.5rem;
 }
 
-.field-group label {
+.field-group label,
+.check-row {
   font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.field-label-row a,
+.form-footnote a,
+.form-message a {
+  color: var(--accent);
+  font-size: 0.8125rem;
   font-weight: 650;
 }
 
@@ -355,7 +436,9 @@ input:focus-visible {
   line-height: 1.45;
 }
 
-.field-group input {
+.field-group input,
+.field-group select,
+.field-group textarea {
   min-height: 3rem;
   width: 100%;
   border: 1px solid var(--border);
@@ -365,8 +448,65 @@ input:focus-visible {
   padding: 0.7rem 0.8rem;
 }
 
-.field-group input:focus {
+.field-group input:focus,
+.field-group select:focus,
+.field-group textarea:focus {
   border-color: var(--focus);
+}
+
+.otp-input {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.75rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.check-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.check-row input {
+  width: 1rem;
+  height: 1rem;
+  margin: 0.15rem 0 0;
+  accent-color: var(--accent);
+}
+
+.consent-group {
+  display: grid;
+  gap: 0.75rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.form-message {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-strong);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  line-height: 1.5;
+  padding: 0.8rem 0.9rem;
+}
+
+.form-message--error {
+  border-left-color: var(--danger);
+}
+
+.form-footnote {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  text-align: center;
 }
 
 .back-link {
@@ -440,12 +580,97 @@ input:focus-visible {
   gap: 1.1rem;
 }
 
+.profile-summary {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 0;
+}
+
+.profile-summary div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.profile-summary dt,
+.profile-summary dd {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.profile-summary dt {
+  color: var(--muted);
+}
+
+.profile-summary dd {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
 .app-placeholder-content {
   padding: clamp(5rem, 15vh, 10rem) 0;
 }
 
 .app-placeholder-content h1 {
   max-width: 14ch;
+}
+
+.platform-tool {
+  display: grid;
+  margin-top: 4rem;
+  grid-template-columns: minmax(14rem, 0.55fr) minmax(28rem, 1fr);
+  gap: clamp(2rem, 6vw, 5rem);
+  border-top: 1px solid var(--border);
+  padding-top: 3rem;
+}
+
+.platform-tool h2,
+.confirmation-dialog h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  letter-spacing: -0.04em;
+}
+
+.platform-tool > div > p:last-child,
+.confirmation-dialog > p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.platform-account-form {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1.5rem;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  z-index: 50;
+  display: grid;
+  inset: 0;
+  place-items: center;
+  background: color-mix(in srgb, #000, transparent 38%);
+  padding: 1rem;
+}
+
+.confirmation-dialog {
+  width: min(100%, 30rem);
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--surface);
+  box-shadow: 0 1.5rem 4rem rgba(0, 0, 0, 0.28);
+  padding: 1.5rem;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
 @media (max-width: 900px) {
@@ -499,6 +724,11 @@ input:focus-visible {
     max-width: none;
   }
 
+  .hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .primary-button {
     width: 100%;
   }
@@ -520,6 +750,10 @@ input:focus-visible {
     width: min(100% - 2rem, 42rem);
   }
 
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
   .onboarding-shell,
   .app-placeholder-shell {
     width: min(100% - 2rem, 42rem);
@@ -534,6 +768,10 @@ input:focus-visible {
     grid-template-columns: 1fr;
     gap: 2rem;
     padding: 3rem 0;
+  }
+
+  .platform-tool {
+    grid-template-columns: 1fr;
   }
 
   .onboarding-intro h1,

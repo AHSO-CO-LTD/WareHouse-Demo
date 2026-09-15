@@ -15,6 +15,8 @@
 - Tenant foundation: `workspace`, `workspace_limit`, `consent_record`.
 - Platform controls: `support_session`, `platform_setting`, `audit_log`.
 
+`20260915090000_email_otp_auth` adds normalized phone/profile/consent and forced-password-change fields to `user`, plus `email_delivery` metadata for deduplicated non-OTP transactional messages. OTP content is never stored in `email_delivery`. A functional unique index on `LOWER(email)` and a unique E.164 phone constraint protect registration under concurrent requests.
+
 The external identity pair `(providerId, accountId)` is unique. A user owns at most one workspace. Workspace limits are copied into a one-to-one snapshot so a future global policy change does not silently alter an existing demo.
 
 ## Lifecycle

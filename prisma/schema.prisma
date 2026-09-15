@@ -8,23 +8,33 @@ datasource db {
 }
 
 model User {
-  id            String            @id
-  name          String
-  email         String
-  emailVerified Boolean           @default(false)
-  image         String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  role          String?
-  banned        Boolean?          @default(false)
-  banReason     String?
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
-  workspace     Workspace?
-  supportStarts SupportSession[]  @relation("SupportActor")
-  auditEvents   AuditLog[]        @relation("AuditActor")
-  settingEdits  PlatformSetting[] @relation("SettingEditor")
+  id                    String            @id
+  name                  String
+  email                 String
+  emailVerified         Boolean           @default(false)
+  image                 String?
+  phoneNumber           String?           @unique
+  companyName           String?
+  dateOfBirth           DateTime?         @db.Date
+  termsAcceptedAt       DateTime?
+  privacyAcceptedAt     DateTime?
+  termsVersion          String?
+  privacyVersion        String?
+  marketingEmailConsent Boolean           @default(false)
+  mustChangePassword    Boolean           @default(false)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  role                  String?
+  banned                Boolean?          @default(false)
+  banReason             String?
+  banExpires            DateTime?
+  sessions              Session[]
+  accounts              Account[]
+  workspace             Workspace?
+  supportStarts         SupportSession[]  @relation("SupportActor")
+  auditEvents           AuditLog[]        @relation("AuditActor")
+  settingEdits          PlatformSetting[] @relation("SettingEditor")
+  emailDeliveries       EmailDelivery[]
 
   @@unique([email])
   @@map("user")
@@ -65,6 +75,18 @@ enum AuditResult {
   FAILURE
 }
 
+enum EmailDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum TransactionalEmailType {
+  EMAIL_VERIFIED_WELCOME
+  DEMO_ACTIVATED
+  PASSWORD_CHANGED
+}
+
 model Workspace {
   id           String          @id @default(uuid()) @db.Uuid
   ownerUserId  String          @unique
@@ -89,6 +111,7 @@ model Workspace {
   consents        ConsentRecord[]
   supportSessions SupportSession[]
   auditEvents     AuditLog[]
+  emailDeliveries EmailDelivery[]
 
   @@index([status, expiresAt])
   @@index([status, purgeAt])
@@ -199,6 +222,29 @@ model PlatformSetting {
   @@map("platform_setting")
 }
 
+model EmailDelivery {
+  id             String                 @id @default(uuid()) @db.Uuid
+  userId         String?
+  user           User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspaceId    String?                @db.Uuid
+  workspace      Workspace?             @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  recipient      String
+  type           TransactionalEmailType
+  idempotencyKey String                 @unique
+  status         EmailDeliveryStatus    @default(PENDING)
+  attemptCount   Int                    @default(0)
+  lastAttemptAt  DateTime?
+  sentAt         DateTime?
+  failureCode    String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId, type, createdAt])
+  @@index([workspaceId, type, createdAt])
+  @@map("email_delivery")
+}
+
 model Session {
   id             String   @id
   expiresAt      DateTime
@@ -232,8 +278,8 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  @@index([userId])
   @@unique([providerId, accountId])
+  @@index([userId])
   @@map("account")
 }
 

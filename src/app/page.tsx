@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function Home() {
@@ -14,10 +13,13 @@ export default function Home() {
           </span>
           <span>AHSO Warehouse</span>
         </Link>
-        <nav className="header-actions" aria-label="Tiện ích">
+        <nav className="header-actions" aria-label="Tài khoản và giao diện">
           <ThemeToggle />
-          <Link className="text-link" href="/platform/login">
-            Quản trị
+          <Link className="text-link" href="/login">
+            Đăng nhập
+          </Link>
+          <Link className="compact-button" href="/register">
+            Đăng ký
           </Link>
         </nav>
       </header>
@@ -30,7 +32,14 @@ export default function Home() {
             Quản lý nhập, xuất, tồn và kiểm kê theo đúng vị trí, với lịch sử rõ
             ràng.
           </p>
-          <GoogleSignInButton />
+          <div className="hero-actions">
+            <Link className="primary-button" href="/register">
+              Dùng thử 30 ngày
+            </Link>
+            <Link className="secondary-button" href="/login">
+              Tôi đã có tài khoản
+            </Link>
+          </div>
         </div>
 
         <figure className="hero-visual">
@@ -58,8 +67,8 @@ export default function Home() {
           <span>để thử luồng vận hành</span>
         </div>
         <p>
-          Dữ liệu demo độc lập theo tài khoản Google. Không dùng cho vận hành
-          thực tế.
+          Dữ liệu demo độc lập theo tài khoản đã xác minh. Không dùng cho vận
+          hành thực tế.
         </p>
       </section>
     </main>

@@ -14,8 +14,8 @@
 - Next.js App Router full-stack.
 - PostgreSQL.
 - Prisma ORM và migrations.
-- Better Auth với Google OAuth cho người dùng demo.
-- Email/password và liên kết Google cho Platform DEV/ADMIN.
+- Better Auth với email/password và email OTP cho người dùng demo và Platform DEV/ADMIN.
+- Nodemailer dùng SMTP phía server cho email giao dịch.
 - UI theo hệ component composable kiểu shadcn, responsive desktop-first.
 - Runtime và package được pin chính xác trong `package.json`; Node.js 24.x, Next.js 16.3.5, Better Auth 1.7.5 và Prisma 7.10.0.
 
@@ -30,7 +30,7 @@
 
 ## Multi-tenancy
 
-- Một Google account tạo một workspace demo độc lập.
+- Một tài khoản email đã xác minh tạo một workspace demo độc lập.
 - Không mời hoặc liên kết nhiều demo user vào cùng workspace.
 - Mọi dữ liệu tenant mang `workspaceId`; phạm vi workspace lấy từ session, không tin tenant ID do client gửi.
 - Platform DEV/ADMIN có thể xem và hỗ trợ chỉnh dữ liệu thông qua Support Mode có lý do, thời hạn, banner và audit trước/sau.
@@ -40,8 +40,10 @@
 
 ### Demo user
 
-- Đăng nhập bằng Google.
-- Hoàn tất onboarding gồm tên công ty, người liên hệ, thông tin liên hệ và consent trước khi dùng demo.
+- Đăng ký bằng email/password; email là username và phải xác minh bằng OTP trước khi truy cập.
+- Email và số điện thoại chuẩn hóa là duy nhất toàn hệ thống; số điện thoại dùng chuẩn E.164.
+- Form đăng ký yêu cầu họ tên, email, số điện thoại, mật khẩu và consent; công ty và ngày sinh là tùy chọn.
+- Hoàn tất onboarding để tạo workspace và bắt đầu 30 ngày dùng thử.
 - Là chủ duy nhất của workspace và có quyền thao tác các chức năng demo.
 - Phê duyệt hai người bị khóa tắt vì workspace chỉ có một người dùng.
 
@@ -58,10 +60,11 @@
 ### Platform credential bootstrap
 
 - Username là email duy nhất, chuẩn hóa chữ thường.
-- DEV đầu tiên được bootstrap bằng secret triển khai một lần; không có credential mặc định trong source.
+- Chỉ bootstrap một DEV đầu tiên bằng email đã duyệt và mật khẩu tạm thời nhập khi triển khai; không có mật khẩu trong source hoặc log.
+- DEV bootstrap bắt buộc đổi mật khẩu ngay lần đăng nhập đầu tiên và DEV có thể tạo thêm DEV/ADMIN.
 - Mật khẩu băm một chiều; hỗ trợ đổi/quên mật khẩu qua SMTP và thu hồi session cũ.
-- Platform account có thể liên kết Google account đã xác minh.
-- Better Auth được chọn sau dependency review vì adapter chính thức hỗ trợ Prisma 7, Google OAuth, email/password và account linking trong cùng một hệ thống xác thực.
+- Better Auth email OTP dùng mã 6 số, hiệu lực 10 phút, tối đa 5 lần nhập sai và lưu hash.
+- Google OAuth và account linking không thuộc hệ thống.
 
 ## Warehouse domain
 
@@ -128,7 +131,9 @@
 ## Email and lead management
 
 - SMTP cấu hình bằng environment secret.
-- Email onboarding hợp nhất: cảm ơn, chào mừng AHSO, chính sách, hạn mức và thời hạn.
+- Email xác minh thành công được gộp với lời chào mừng AHSO; email kích hoạt demo riêng chứa chính sách, hạn mức và thời hạn chính xác.
+- Email OTP chỉ gửi theo thao tác người dùng, cooldown 60 giây và tối đa 5 lần/giờ.
+- Email giao dịch được chống gửi trùng theo sự kiện; email marketing chỉ gửi khi có consent.
 - Nhắc hết hạn vào ngày 23, 27 và 29; thông báo khóa, sắp xóa và đã xóa.
 - Email đặt lại mật khẩu và cảnh báo bảo mật cho Platform DEV/ADMIN.
 - Yêu cầu tư vấn tạo lead với pipeline: Mới, Đã liên hệ, Đang tư vấn, Có tiềm năng, Đã ký, Đã đóng.
@@ -152,7 +157,7 @@
 ## Deployment
 
 - VPS có HTTPS, PostgreSQL, backup và scheduled task.
-- Google OAuth redirect URI và SMTP secret đặt ngoài repository.
+- SMTP, Better Auth và scheduled-job secrets đặt ngoài repository.
 - Cần health check, migration deployment và rollback plan trước public launch.
 
 ## Non-goals của demo
@@ -176,3 +181,4 @@
 - [ADR 0002 — Multi-tenant demo lifecycle](docs/adr/0002-multi-tenant-demo-lifecycle.md)
 - [ADR 0003 — Immutable inventory ledger](docs/adr/0003-immutable-inventory-ledger.md)
 - [ADR 0004 — Scaled 2D warehouse layout](docs/adr/0004-scaled-2d-warehouse-layout.md)
+- [ADR 0005 — Email/password và email OTP](docs/adr/0005-email-password-otp-identity.md)

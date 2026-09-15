@@ -2,37 +2,21 @@
 
 import "server-only";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { CURRENT_POLICIES } from "@/config/policies";
 import { getServerEnv } from "@/config/server-env";
 import { getCurrentUser } from "@/data/current-user";
+import { type OnboardingState } from "@/app/onboarding/state";
 import { AUTH_ROLES } from "@/lib/auth/platform-access";
 import { db } from "@/lib/server/db";
+import { sendDemoActivatedEmail } from "@/lib/server/email";
 
 const onboardingSchema = z.object({
   displayName: z.string().trim().min(2).max(120),
-  contactName: z.string().trim().min(2).max(100),
-  contactPhone: z
-    .string()
-    .trim()
-    .max(30)
-    .refine((value) => value === "" || /^[+\d][\d\s().-]+$/.test(value)),
 });
-
-export type OnboardingState = {
-  message: string | null;
-  fieldErrors: {
-    displayName?: string[];
-    contactName?: string[];
-    contactPhone?: string[];
-  };
-};
-
-export const initialOnboardingState: OnboardingState = {
-  message: null,
-  fieldErrors: {},
-};
 
 function addDays(date: Date, days: number): Date {
   const result = new Date(date);
@@ -46,7 +30,12 @@ export async function createWorkspaceAction(
 ): Promise<OnboardingState> {
   const user = await getCurrentUser();
 
-  if (!user || user.role !== AUTH_ROLES.DEMO_USER) {
+  if (
+    !user ||
+    !user.emailVerified ||
+    user.role !== AUTH_ROLES.DEMO_USER ||
+    user.mustChangePassword
+  ) {
     return {
       message: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.",
       fieldErrors: {},
@@ -55,20 +44,12 @@ export async function createWorkspaceAction(
 
   const parsed = onboardingSchema.safeParse({
     displayName: formData.get("displayName"),
-    contactName: formData.get("contactName"),
-    contactPhone: formData.get("contactPhone"),
   });
 
   if (!parsed.success) {
-    const errors = z.flattenError(parsed.error).fieldErrors;
-
     return {
       message: "Vui lòng kiểm tra lại thông tin.",
-      fieldErrors: {
-        displayName: errors.displayName,
-        contactName: errors.contactName,
-        contactPhone: errors.contactPhone,
-      },
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
     };
   }
 
@@ -81,20 +62,63 @@ export async function createWorkspaceAction(
     redirect("/demo");
   }
 
+  const registration = await db.user.findUnique({
+    where: { id: user.id },
+    select: {
+      name: true,
+      email: true,
+      phoneNumber: true,
+      marketingEmailConsent: true,
+      termsAcceptedAt: true,
+      privacyAcceptedAt: true,
+      termsVersion: true,
+      privacyVersion: true,
+    },
+  });
+
+  if (
+    !registration?.phoneNumber ||
+    !registration.termsAcceptedAt ||
+    !registration.privacyAcceptedAt
+  ) {
+    return {
+      message:
+        "Hồ sơ đăng ký chưa đầy đủ. Vui lòng liên hệ AHSO để được hỗ trợ.",
+      fieldErrors: {},
+    };
+  }
+
+  const termsAcceptedAt = registration.termsAcceptedAt;
+  const privacyAcceptedAt = registration.privacyAcceptedAt;
+
   const env = getServerEnv();
   const startedAt = new Date();
   const expiresAt = addDays(startedAt, env.DEMO_DURATION_DAYS);
   const purgeAt = addDays(expiresAt, env.DEMO_GRACE_DAYS);
+  const requestHeaders = await headers();
+  const ipAddress =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    requestHeaders.get("x-real-ip");
+  const userAgent = requestHeaders.get("user-agent");
+
+  let activatedWorkspace:
+    | {
+        id: string;
+        displayName: string | null;
+        startedAt: Date | null;
+        expiresAt: Date | null;
+      }
+    | undefined;
 
   try {
-    await db.$transaction(async (transaction) => {
+    activatedWorkspace = await db.$transaction(async (transaction) => {
       const workspace = await transaction.workspace.create({
         data: {
           ownerUserId: user.id,
           displayName: parsed.data.displayName,
-          contactName: parsed.data.contactName,
-          contactEmail: user.email,
-          contactPhone: parsed.data.contactPhone || null,
+          contactName: registration.name,
+          contactEmail: registration.email,
+          contactPhone: registration.phoneNumber,
           status: "ACTIVE",
           startedAt,
           expiresAt,
@@ -120,11 +144,48 @@ export async function createWorkspaceAction(
         select: {
           id: true,
           displayName: true,
-          status: true,
           startedAt: true,
           expiresAt: true,
-          purgeAt: true,
         },
+      });
+
+      await transaction.consentRecord.createMany({
+        data: [
+          {
+            workspaceId: workspace.id,
+            type: "TERMS_OF_SERVICE",
+            granted: true,
+            policyKey: CURRENT_POLICIES.terms.key,
+            policyVer:
+              registration.termsVersion ?? CURRENT_POLICIES.terms.version,
+            source: "registration",
+            ipAddress,
+            userAgent,
+            recordedAt: termsAcceptedAt,
+          },
+          {
+            workspaceId: workspace.id,
+            type: "PRIVACY_POLICY",
+            granted: true,
+            policyKey: CURRENT_POLICIES.privacy.key,
+            policyVer:
+              registration.privacyVersion ?? CURRENT_POLICIES.privacy.version,
+            source: "registration",
+            ipAddress,
+            userAgent,
+            recordedAt: privacyAcceptedAt,
+          },
+          {
+            workspaceId: workspace.id,
+            type: "MARKETING_EMAIL",
+            granted: registration.marketingEmailConsent,
+            policyKey: "marketing-email",
+            policyVer: "2026-09-15",
+            source: "registration",
+            ipAddress,
+            userAgent,
+          },
+        ],
       });
 
       await transaction.auditLog.create({
@@ -136,8 +197,12 @@ export async function createWorkspaceAction(
           resourceId: workspace.id,
           result: "SUCCESS",
           after: workspace,
+          ipAddress,
+          userAgent,
         },
       });
+
+      return workspace;
     });
   } catch {
     const workspace = await db.workspace.findUnique({
@@ -151,6 +216,22 @@ export async function createWorkspaceAction(
         fieldErrors: {},
       };
     }
+  }
+
+  if (
+    activatedWorkspace?.displayName &&
+    activatedWorkspace.startedAt &&
+    activatedWorkspace.expiresAt
+  ) {
+    void sendDemoActivatedEmail(db, env, {
+      userId: user.id,
+      workspaceId: activatedWorkspace.id,
+      email: registration.email,
+      name: registration.name,
+      workspaceName: activatedWorkspace.displayName,
+      startedAt: activatedWorkspace.startedAt,
+      expiresAt: activatedWorkspace.expiresAt,
+    });
   }
 
   redirect("/demo");

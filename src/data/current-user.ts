@@ -18,6 +18,12 @@ export const getCurrentUser = cache(async () => {
     id: session.user.id,
     name: session.user.name,
     email: session.user.email,
+    emailVerified: session.user.emailVerified,
+    phoneNumber: session.user.phoneNumber ?? null,
+    companyName: session.user.companyName ?? null,
+    dateOfBirth: session.user.dateOfBirth ?? null,
+    marketingEmailConsent: session.user.marketingEmailConsent,
+    mustChangePassword: session.user.mustChangePassword,
     role: session.user.role ?? null,
   };
 });

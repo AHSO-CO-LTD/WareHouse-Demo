@@ -15,7 +15,7 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 
 ### Required
 
-- Google login và onboarding company/contact/consent.
+- Đăng ký email/password, xác minh email bằng OTP và onboarding company/contact/consent.
 - Workspace độc lập cho từng demo user.
 - Hạn mức và vòng đời demo tự động.
 - Dữ liệu mẫu end-to-end và reset an toàn.
@@ -46,7 +46,7 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 ### Application
 
 - Next.js App Router full-stack, TypeScript strict.
-- Better Auth handles Google OAuth for demo users and email/password plus Google linking for platform accounts.
+- Better Auth handles email/password for all users and email OTP for verification/password reset; Google OAuth and account linking are removed.
 - Tách module theo domain: `platform`, `workspace`, `warehouse`, `catalog`, `inventory`, `project`, `crm`, `quotation`, `layout`, `audit`, `email`.
 - Component không truy cập Prisma trực tiếp.
 - Domain service xử lý validation, authorization, transaction và audit.
@@ -124,7 +124,7 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 - Authorization lại tại mỗi Server Action/Route Handler.
 - Rate limit login, password reset, onboarding, reset workspace, PDF generation và consultation requests.
 - Password hash mạnh; token reset lưu hash và dùng một lần.
-- OAuth/SMTP/database secrets ngoài repository và không ghi log.
+- SMTP/database/auth/job secrets ngoài repository và không ghi log.
 - Support Mode yêu cầu reason, có expiry, banner, before/after audit và platform actor rõ ràng.
 - Không impersonation.
 - Không cho mất DEV cuối cùng.
@@ -134,7 +134,7 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 
 ### Public/demo
 
-- Landing, Google login, onboarding, policy/consent.
+- Landing, registration, email OTP, login, password recovery, onboarding and policy consent.
 - Dashboard.
 - Warehouse tree và quick search.
 - Products/lots/units/cost.
@@ -148,7 +148,7 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 
 ### Platform
 
-- Email/password login, forgot/reset password, Google link.
+- Email/password login, forgot/reset password and mandatory first-login password change.
 - Overview metrics and registration funnel.
 - Workspace/account list, filters and detail.
 - Lead pipeline and notes.
@@ -202,6 +202,20 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 
 Inventory core must stabilize before layout editing begins. The layout phase may use a new canvas/drag library only after an implementation spike and explicit dependency review.
 
+### Phase 1 authentication amendment — 15/09/2026
+
+- Done: remove Google OAuth/account linking from the approved architecture and source configuration.
+- Done: public email/password registration fields, E.164 phone normalization and database uniqueness constraints.
+- Done: six-digit hashed email OTP foundation for verification and password reset, including resend/attempt rate limits.
+- Done: forced first-login password change foundation for the bootstrap DEV and DEV permission to create DEV/ADMIN.
+- Done: SMTP transactional templates for OTP, verified welcome, demo activation and password-change security notice.
+- Done: protected seven-day unverified-account cleanup endpoint.
+- Pending: publish the approved Terms of Service and Privacy Policy content before public registration opens.
+- Pending: add the bounded-retry email worker and Platform email-delivery operations planned for Phase 6.
+- Done: apply both committed migrations to the configured PostgreSQL database and verify the required auth/workspace tables and new identity columns.
+- Done: authenticate to the configured SMTP service and deliver one test message successfully.
+- Pending: smoke-test real OTP templates, login/session revocation and scheduled cleanup on the VPS-like environment.
+
 ## 10. Verification plan
 
 Execution of checks starts only after implementation is approved and underway.
@@ -213,7 +227,7 @@ Execution of checks starts only after implementation is approved and underway.
 - PDF render inspection for Vietnamese/English fonts and totals.
 - Visual/manual tests for Light/Dark, VI/EN and common desktop/mobile sizes.
 - Layout tests for scale, collision, rotation, entity linking and dirty-state behavior.
-- Runtime smoke test on VPS-like environment including OAuth, SMTP and scheduled jobs.
+- Runtime smoke test on VPS-like environment including SMTP, OTP and scheduled jobs.
 - Recheck that no secrets/tokens appear in application, email or audit logs.
 
 ## 11. Risks and mitigations

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getCurrentUser } from "@/data/current-user";
 import { AUTH_ROLES } from "@/lib/auth/platform-access";
@@ -13,7 +14,11 @@ export default async function DemoPage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/");
+    redirect("/login");
+  }
+
+  if (user.mustChangePassword) {
+    redirect("/change-password");
   }
 
   if (user.role !== AUTH_ROLES.DEMO_USER) {
@@ -42,7 +47,10 @@ export default async function DemoPage() {
           </span>
           <strong>{workspace.displayName}</strong>
         </div>
-        <ThemeToggle />
+        <div className="header-actions">
+          <ThemeToggle />
+          <SignOutButton />
+        </div>
       </header>
       <section className="app-placeholder-content">
         <p className="eyebrow">Không gian demo đã sẵn sàng</p>

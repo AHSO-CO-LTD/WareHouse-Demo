@@ -22,7 +22,16 @@ export const platformAdminRole = platformAccessControl.newRole({
 });
 
 export const platformDevRole = platformAccessControl.newRole({
-  user: ["create", "list", "get", "update", "ban", "set-password", "set-email"],
+  user: [
+    "create",
+    "list",
+    "get",
+    "update",
+    "ban",
+    "set-password",
+    "set-email",
+    "set-role",
+  ],
   session: ["list", "revoke", "delete"],
 });
 
