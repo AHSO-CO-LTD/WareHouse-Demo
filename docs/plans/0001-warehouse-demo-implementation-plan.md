@@ -1,0 +1,256 @@
+# Warehouse Demo — Implementation Plan
+
+- Status: Approved
+- Approved date: 15/09/2026
+- Complexity: High
+- Execution status: In Progress
+
+## 1. Objective
+
+Tạo sản phẩm web demo công khai của AHSO để người dùng trải nghiệm một vòng quản lý kho hoàn chỉnh, từ cấu trúc vị trí đến tồn kho, dự án, chi phí và báo giá; đồng thời giúp AHSO quản lý đăng ký, hành vi sử dụng và yêu cầu tư vấn.
+
+Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng là dự án khác và sẽ được khảo sát/thiết kế lại theo nhu cầu thực tế.
+
+## 2. Business requirements
+
+### Required
+
+- Google login và onboarding company/contact/consent.
+- Workspace độc lập cho từng demo user.
+- Hạn mức và vòng đời demo tự động.
+- Dữ liệu mẫu end-to-end và reset an toàn.
+- Quản lý kho, khu, kệ, tầng, slot và QR vị trí.
+- Sản phẩm, đơn vị quy đổi, lô, hạn sử dụng, giá vốn.
+- Inventory ledger cho tồn đầu kỳ, nhập, xuất, điều chuyển, kiểm kê, điều chỉnh và giữ hàng.
+- FEFO/FIFO suggestions và trạng thái tồn.
+- Dự án, ngân sách và cost snapshot.
+- Công ty, người liên hệ, khách cá nhân và nhà cung cấp tùy chọn.
+- Dự toán nội bộ, báo giá khách hàng, VAT và PDF song ngữ.
+- Dashboard tenant và dashboard Platform DEV/ADMIN.
+- Support Mode đặc quyền có audit.
+- Email lifecycle, security và consultation lead pipeline.
+- Warehouse Layout Designer 2D theo kích thước thật.
+
+### Out of scope
+
+- Keyence/Android app, native scanner SDK và offline sync.
+- Multi-user trong tenant demo.
+- Phê duyệt hai người hoạt động trong demo.
+- Procurement/PO.
+- Production migration hoặc demo-to-production upgrade.
+- CAD, 3D, polygon floor plan hoặc nhiều tầng tòa nhà.
+- Import toàn bộ lịch sử Excel.
+
+## 3. Architecture
+
+### Application
+
+- Next.js App Router full-stack, TypeScript strict.
+- Better Auth handles Google OAuth for demo users and email/password plus Google linking for platform accounts.
+- Tách module theo domain: `platform`, `workspace`, `warehouse`, `catalog`, `inventory`, `project`, `crm`, `quotation`, `layout`, `audit`, `email`.
+- Component không truy cập Prisma trực tiếp.
+- Domain service xử lý validation, authorization, transaction và audit.
+- Server Actions cho form mutation; `/api/v1` Route Handlers cho endpoint có contract HTTP.
+
+### Data
+
+- PostgreSQL là nguồn dữ liệu chuẩn.
+- Prisma migrations; không dùng schema push trong deployment production-like.
+- Mọi bảng tenant có `workspaceId` và index tương ứng.
+- Unique constraint phải bao gồm workspace scope khi dữ liệu chỉ duy nhất trong tenant.
+- Decimal DB type cho số lượng, hệ số quy đổi và tiền; không dùng floating point cho cost.
+
+### Scheduled operations
+
+- Database-backed email outbox với bounded retry.
+- VPS scheduled task xử lý email, reservation expiry, workspace lock/purge và expiry reminders.
+- Job idempotent, có lock/chống chạy trùng và lưu kết quả.
+
+## 4. Data design outline
+
+### Platform and access
+
+- Better Auth `User`, `Session`, `Account`, `Verification` dùng chung cho danh tính; role tách Demo User, Platform ADMIN và Platform DEV.
+- `Workspace`, `WorkspaceLimit`, `ConsentRecord`.
+- `SupportSession`, `AuditLog`, `EmailOutbox`, `ConsultationLead`, `LeadActivity`.
+
+### Warehouse catalog
+
+- `Warehouse`, `Zone`, `Rack`, `RackLevel`, `Slot`.
+- `RackType`, `RackTemplate`, `Layout`, `LayoutObject`, `LayoutRevision`.
+- Parent FK dùng restrictive delete khi còn dữ liệu con hoặc tồn kho.
+- Mã vị trí unique trong workspace và cấp cha phù hợp.
+
+### Product catalog
+
+- `Product`, `Unit`, `ProductUnitConversion`, `InventoryLot`, `Supplier`.
+- `Product.currentCost` là giá vốn hiện hành.
+- `ProductCostHistory` ghi giá trước/sau và actor.
+- Một bộ quy đổi hiện hành trên mỗi sản phẩm; giao dịch giữ snapshot unit/factor.
+
+### Inventory
+
+- `InventoryDocument`, `InventoryDocumentLine`.
+- `InventoryLedgerEntry` bất biến.
+- `InventoryBalance` theo workspace/product/lot/slot/status.
+- `Transfer`, `StocktakeSession`, `StocktakeCount`, `Reservation`.
+- Composite unique/index phục vụ truy vấn balance, FIFO/FEFO và lịch sử sản phẩm/vị trí.
+
+### Project and quotation
+
+- `Project`, `ProjectBudgetOverride`.
+- `Organization`, `Contact`, `CustomerContextSnapshot`.
+- `Estimate`, `EstimateLine`, `Quotation`, `QuotationLine`, `QuotationConversion`.
+- Dòng chứng từ lưu snapshot tên, đơn vị, quantity, cost, sale price, VAT và conversion factor.
+
+## 5. Invariants and business rules
+
+- Không có tồn tổng độc lập ngoài tổng hợp từ balance/ledger cấp slot.
+- Không ghi tồn âm hoặc giữ vượt tồn khả dụng.
+- Ledger entry đã post không update/delete.
+- Reversal tham chiếu chứng từ gốc và không được đảo trùng.
+- Điều chuyển hai bước không làm mất quyền sở hữu hàng khi ở trạng thái in-transit.
+- Stocktake không sửa lịch sử; variance được post thành adjustment.
+- Quote/project creation không giữ hàng.
+- Reservation có expiry bắt buộc.
+- Product cost change revalues current stock view nhưng không đổi snapshot lịch sử.
+- Quote conversion phải idempotent.
+- Mọi quota check và create thực hiện trong cùng transaction.
+
+## 6. Security and privacy
+
+- Workspace scope được lấy từ verified session trong Data Access Layer.
+- Không nhận hoặc tin `workspaceId` từ form/API body để quyết định quyền truy cập.
+- Authorization lại tại mỗi Server Action/Route Handler.
+- Rate limit login, password reset, onboarding, reset workspace, PDF generation và consultation requests.
+- Password hash mạnh; token reset lưu hash và dùng một lần.
+- OAuth/SMTP/database secrets ngoài repository và không ghi log.
+- Support Mode yêu cầu reason, có expiry, banner, before/after audit và platform actor rõ ràng.
+- Không impersonation.
+- Không cho mất DEV cuối cùng.
+- Tenant-isolation tests là release gate bắt buộc.
+
+## 7. UX and screens
+
+### Public/demo
+
+- Landing, Google login, onboarding, policy/consent.
+- Dashboard.
+- Warehouse tree và quick search.
+- Products/lots/units/cost.
+- Receipts, issues, transfers, stocktakes, reservations.
+- Projects/budgets.
+- Organizations, contacts, individual customers, suppliers.
+- Estimates, quotations, PDF preview/download.
+- Expiry/status views, inventory history and audit.
+- Settings: language, theme, demo lifecycle, reset/delete workspace.
+- Consultation request.
+
+### Platform
+
+- Email/password login, forgot/reset password, Google link.
+- Overview metrics and registration funnel.
+- Workspace/account list, filters and detail.
+- Lead pipeline and notes.
+- Support Mode entry/exit.
+- Lock/reset/delete/quota operations with custom confirmation.
+- Email delivery status and system audit.
+
+### Warehouse layout
+
+- View mode: navigate, inspect and open zone/rack/inventory.
+- Edit mode: grid, scale, zoom/pan, drag/drop, rotate, dimension editor and collision warnings.
+- Palette: unplaced zones/racks, doors, aisles, obstacles and predefined rack templates.
+- Remove from map returns business entity to unplaced list.
+- Manual Save confirmation, dirty-state protection and in-session undo/redo.
+
+## 8. Demo quotas and lifecycle
+
+| Resource                   | Limit |
+| -------------------------- | ----: |
+| Warehouse                  |     1 |
+| Zone per warehouse         |     2 |
+| Rack per zone              |     3 |
+| Rack level per rack        |     3 |
+| Slot per rack level        |     2 |
+| Product                    |    20 |
+| Project                    |     5 |
+| Company/individual profile |     5 |
+| Supplier                   |     5 |
+| Estimate/quotation         |    10 |
+| Inventory transaction      |   100 |
+
+- Day 0: onboarding, seed sample dataset and onboarding email.
+- Day 23/27/29: expiry reminders.
+- Day 30: workspace read-only and locked email.
+- Day 36: deletion warning.
+- Day 37: purge tenant business data and send result email where allowed.
+
+## 9. Delivery phases
+
+| Phase | Scope                                                                      | Status      |
+| ----- | -------------------------------------------------------------------------- | ----------- |
+| 0     | Scaffold, project docs, ADRs, environment schema                           | Done        |
+| 1     | PostgreSQL schema foundation, auth, onboarding, tenant isolation           | In Progress |
+| 2     | Demo lifecycle, quotas, seed/reset, platform accounts                      | Pending     |
+| 3     | Warehouse hierarchy, products, units, lots, QR                             | Pending     |
+| 4     | Inventory ledger and all core stock workflows                              | Pending     |
+| 5     | Projects, CRM, estimates, quotations, VAT, bilingual PDF                   | Pending     |
+| 6     | Dashboards, audit, email center, consultation pipeline                     | Pending     |
+| 7     | Scaled 2D Warehouse Layout Designer                                        | Pending     |
+| 8     | VPS packaging, scheduled jobs, security hardening and release verification | Pending     |
+
+Inventory core must stabilize before layout editing begins. The layout phase may use a new canvas/drag library only after an implementation spike and explicit dependency review.
+
+## 10. Verification plan
+
+Execution of checks starts only after implementation is approved and underway.
+
+- Unit tests for conversions, VAT, budgets, FIFO/FEFO, expiry and quota rules.
+- Integration tests for atomic inventory transactions, reversal, transfer and reservation expiry.
+- Tenant isolation tests with at least two workspaces.
+- Authorization tests for Demo User, Platform ADMIN and DEV.
+- PDF render inspection for Vietnamese/English fonts and totals.
+- Visual/manual tests for Light/Dark, VI/EN and common desktop/mobile sizes.
+- Layout tests for scale, collision, rotation, entity linking and dirty-state behavior.
+- Runtime smoke test on VPS-like environment including OAuth, SMTP and scheduled jobs.
+- Recheck that no secrets/tokens appear in application, email or audit logs.
+
+## 11. Risks and mitigations
+
+| Risk                                          | Level  | Mitigation                                                              |
+| --------------------------------------------- | ------ | ----------------------------------------------------------------------- |
+| Cross-tenant data leak                        | High   | Central DAL, scoped indexes, isolation tests, no client tenant trust    |
+| Incorrect inventory under concurrent actions  | High   | DB transaction, row/version checks, idempotency keys, ledger invariants |
+| Platform support silently changes tenant data | High   | Support Mode, reason, banner, audit before/after, no impersonation      |
+| Layout module expands into CAD                | High   | Rectangle-only boundary, template-based racks, no arbitrary vector/3D   |
+| Email spam or duplicate delivery              | Medium | Combined onboarding, consent, outbox idempotency, bounded retry         |
+| Scheduled purge deletes wrong tenant          | High   | Explicit lifecycle state, scoped job, dry-run/reporting and audit       |
+| PDF Vietnamese font/layout failure            | Medium | Embedded font and render-based visual QA                                |
+| Demo code accidentally reused as production   | Medium | Explicit product boundary in docs and deployment naming                 |
+
+## 12. Dependencies requiring review before installation
+
+- Authentication library and Prisma adapter compatibility.
+- Form/schema validation.
+- i18n.
+- QR encode/render.
+- PDF generation.
+- SMTP transport.
+- Canvas/drag/geometry library for Layout Designer.
+
+No dependency is approved merely because it appears in this list. Each choice must be checked against current packages, maintenance, bundle/runtime impact and VPS compatibility before installation.
+
+## 13. Definition of Done
+
+- All approved demo flows work end-to-end with real PostgreSQL data.
+- Two workspaces cannot access each other's data.
+- Ledger/balance invariants hold and confirmed documents are immutable.
+- Cost/project/quotation snapshots remain stable after current cost changes.
+- Quotas, day-30 lock and day-37 purge work server-side.
+- Platform Support Mode is explicit and fully audited.
+- Sample/reset, email lifecycle and lead pipeline work without duplicate actions.
+- PDF is bilingual and never exposes internal cost unless the document is an internal estimate.
+- Layout Designer uses real dimensions, one business source of truth and safe edit behavior.
+- VI/EN, Light/Dark, loading/error/empty/validation/confirmation states are complete.
+- Required project, database, security, deployment and operating documentation is current.

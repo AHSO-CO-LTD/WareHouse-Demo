@@ -1,0 +1,250 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String            @id
+  name          String
+  email         String
+  emailVerified Boolean           @default(false)
+  image         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  role          String?
+  banned        Boolean?          @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  sessions      Session[]
+  accounts      Account[]
+  workspace     Workspace?
+  supportStarts SupportSession[]  @relation("SupportActor")
+  auditEvents   AuditLog[]        @relation("AuditActor")
+  settingEdits  PlatformSetting[] @relation("SettingEditor")
+
+  @@unique([email])
+  @@map("user")
+}
+
+enum WorkspaceStatus {
+  ONBOARDING
+  ACTIVE
+  READ_ONLY
+  PURGE_PENDING
+  PURGED
+}
+
+enum AppLocale {
+  VI
+  EN
+}
+
+enum AppTheme {
+  LIGHT
+  DARK
+}
+
+enum ConsentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  MARKETING_EMAIL
+}
+
+enum SupportSessionStatus {
+  ACTIVE
+  ENDED
+  EXPIRED
+}
+
+enum AuditResult {
+  SUCCESS
+  FAILURE
+}
+
+model Workspace {
+  id           String          @id @default(uuid()) @db.Uuid
+  ownerUserId  String          @unique
+  owner        User            @relation(fields: [ownerUserId], references: [id], onDelete: Restrict)
+  displayName  String?
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  locale       AppLocale       @default(VI)
+  theme        AppTheme        @default(LIGHT)
+  status       WorkspaceStatus @default(ONBOARDING)
+  startedAt    DateTime?
+  expiresAt    DateTime?
+  lockedAt     DateTime?
+  purgeAt      DateTime?
+  purgedAt     DateTime?
+  version      Int             @default(1)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  limits          WorkspaceLimit?
+  consents        ConsentRecord[]
+  supportSessions SupportSession[]
+  auditEvents     AuditLog[]
+
+  @@index([status, expiresAt])
+  @@index([status, purgeAt])
+  @@map("workspace")
+}
+
+model WorkspaceLimit {
+  id                        String    @id @default(uuid()) @db.Uuid
+  workspaceId               String    @unique @db.Uuid
+  workspace                 Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  durationDays              Int       @default(30)
+  graceDays                 Int       @default(7)
+  warehouseLimit            Int       @default(1)
+  zonesPerWarehouseLimit    Int       @default(2)
+  racksPerZoneLimit         Int       @default(3)
+  levelsPerRackLimit        Int       @default(3)
+  slotsPerLevelLimit        Int       @default(2)
+  productLimit              Int       @default(20)
+  projectLimit              Int       @default(5)
+  partyProfileLimit         Int       @default(5)
+  supplierLimit             Int       @default(5)
+  commercialDocumentLimit   Int       @default(10)
+  inventoryTransactionLimit Int       @default(100)
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@map("workspace_limit")
+}
+
+model ConsentRecord {
+  id          String      @id @default(uuid()) @db.Uuid
+  workspaceId String      @db.Uuid
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  type        ConsentType
+  granted     Boolean
+  policyKey   String
+  policyVer   String
+  source      String
+  ipAddress   String?
+  userAgent   String?
+  recordedAt  DateTime    @default(now())
+
+  @@index([workspaceId, type, recordedAt])
+  @@map("consent_record")
+}
+
+model SupportSession {
+  id              String               @id @default(uuid()) @db.Uuid
+  workspaceId     String               @db.Uuid
+  workspace       Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Restrict)
+  startedByUserId String
+  startedBy       User                 @relation("SupportActor", fields: [startedByUserId], references: [id], onDelete: Restrict)
+  reason          String
+  status          SupportSessionStatus @default(ACTIVE)
+  startedAt       DateTime             @default(now())
+  expiresAt       DateTime
+  endedAt         DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  auditEvents AuditLog[]
+
+  @@index([workspaceId, status, expiresAt])
+  @@index([startedByUserId, startedAt])
+  @@map("support_session")
+}
+
+model AuditLog {
+  id               BigInt          @id @default(autoincrement())
+  workspaceId      String?         @db.Uuid
+  workspace        Workspace?      @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  actorUserId      String?
+  actor            User?           @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  supportSessionId String?         @db.Uuid
+  supportSession   SupportSession? @relation(fields: [supportSessionId], references: [id], onDelete: SetNull)
+  action           String
+  resource         String
+  resourceId       String?
+  result           AuditResult
+  reason           String?
+  before           Json?
+  after            Json?
+  metadata         Json?
+  requestId        String?
+  ipAddress        String?
+  userAgent        String?
+  occurredAt       DateTime        @default(now())
+
+  @@index([workspaceId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([resource, resourceId, occurredAt])
+  @@index([requestId])
+  @@map("audit_log")
+}
+
+model PlatformSetting {
+  id              String   @id @default(uuid()) @db.Uuid
+  key             String   @unique
+  value           Json
+  description     String?
+  updatedByUserId String?
+  updatedBy       User?    @relation("SettingEditor", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  version         Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([updatedByUserId])
+  @@map("platform_setting")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@unique([providerId, accountId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
