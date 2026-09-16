@@ -3,6 +3,7 @@
 import { useLayoutEffect } from "react";
 
 const THEME_STORAGE_KEY = "ahso-theme";
+const THEME_CHANGE_EVENT = "ahso-theme-change";
 
 export function ThemeBootstrap() {
   useLayoutEffect(() => {
@@ -12,6 +13,7 @@ export function ThemeBootstrap() {
     } catch {
       document.documentElement.classList.remove("dark");
     }
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   }, []);
 
   return null;

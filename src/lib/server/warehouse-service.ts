@@ -225,7 +225,8 @@ async function getWorkspace(userId: string) {
   if (!workspace) throw new WarehouseDomainError("WORKSPACE_NOT_FOUND", "Không tìm thấy không gian kho.");
   assertWorkspaceWritable(workspace);
   if (!workspace.limits) throw new WarehouseDomainError("WORKSPACE_LIMITS_MISSING", "Thiếu cấu hình hạn mức kho.");
-  return workspace;
+  const limits = workspace.limits;
+  return { ...workspace, limits };
 }
 
 async function writeWithRetry<T>(operation: () => Promise<T>): Promise<T> {
@@ -407,6 +408,8 @@ type PositionedLevel = {
 async function levelsHaveProductAssignments(_transaction: Prisma.TransactionClient, _levelIds: string[]) {
   // Product assignments are intentionally introduced in a later phase. Until then,
   // every slot is considered product-empty and can be safely repositioned.
+  void _transaction;
+  void _levelIds;
   return false;
 }
 

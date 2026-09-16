@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,25 @@ type ApiErrorResponse = {
   message?: string;
 };
 
+function subscribeToResetEmail(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+}
+
+function getResetEmail() {
+  return window.sessionStorage.getItem(EMAIL_STORAGE_KEY) ?? "";
+}
+
+function getServerResetEmail() {
+  return "";
+}
+
 export function VerifyResetOtpForm() {
   const router = useRouter();
-  const [email, setEmail] = useState<string | null>(null);
+  const email = useSyncExternalStore(subscribeToResetEmail, getResetEmail, getServerResetEmail);
   const [otp, setOtp] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    setEmail(window.sessionStorage.getItem(EMAIL_STORAGE_KEY) ?? "");
-  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,7 +106,7 @@ export function VerifyResetOtpForm() {
           {message}
         </p>
       ) : null}
-      <Button className="h-12 w-full" disabled={isPending || email === null}>
+      <Button className="h-12 w-full" disabled={isPending || !email}>
         {isPending ? "Đang xác minh..." : "Xác minh OTP"}
       </Button>
       <Link className="back-link" href="/forgot-password">
