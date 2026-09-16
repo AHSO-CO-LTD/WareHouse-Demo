@@ -16,8 +16,8 @@ Required groups:
 
 - App and Better Auth URLs/secrets
 - PostgreSQL connection URL
-- Google OAuth client
 - SMTP configuration
+- Internal scheduled-job secret
 - Demo lifecycle durations
 
 For a self-hosted deployment, keep `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` stable across builds and instances.
@@ -31,7 +31,7 @@ npm run db:migrate:dev
 
 Generate the Better Auth-only review schema with `npm run auth:schema:generate`. The command writes an ignored comparison file. Merge reviewed auth changes into the main Prisma schema, create a Prisma migration and regenerate the client.
 
-Create the first Platform DEV only after migrations succeed. Omit `--password` so the CLI requests it interactively.
+Create the first Platform DEV only after migrations succeed. Use the approved bootstrap email, role `platform_dev` and `--data '{"mustChangePassword":true}'`. Omit `--password` so the CLI requests the approved temporary value interactively and never records it in source or shell history.
 
 ## Architecture boundaries
 
@@ -54,4 +54,4 @@ npm run db:validate
 npm run build
 ```
 
-Run database, OAuth, SMTP and lifecycle smoke tests only against configured non-production resources unless an approved deployment plan says otherwise.
+Run database, SMTP and lifecycle smoke tests only against configured non-production resources unless an approved deployment plan says otherwise.

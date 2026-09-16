@@ -1,6 +1,6 @@
 # AHSO Warehouse Demo
 
-Public, time-limited product demo for AHSO Warehouse. The demo lets a single Google-authenticated user explore warehouse structure, inventory operations, projects, costing, quotations, and a scaled 2D warehouse layout in an isolated workspace.
+Public, time-limited product demo for AHSO Warehouse. The demo lets a single email-verified user explore warehouse structure, inventory operations, projects, costing, quotations, and a scaled 2D warehouse layout in an isolated workspace.
 
 This repository is **not** the production warehouse product. A signed customer implementation is discovered, designed, and deployed separately.
 
@@ -33,14 +33,14 @@ The initial migration is committed but has not been applied to a real database i
 After the migration is applied, create the first DEV interactively so the password is not stored in source or shell history:
 
 ```powershell
-npm run auth:create-platform-user -- --email dev@example.com --name "AHSO DEV" --role platform_dev
+npm run auth:create-platform-user -- --email duyhai03082003@gmail.com --name "AHSO Bootstrap DEV" --role platform_dev --data '{"mustChangePassword":true}'
 ```
 
 Use `--force` only when intentionally adding a platform account to a database that already contains users. Runtime role changes will use application-owned guarded operations so the last DEV cannot be demoted or deleted.
 
 Better Auth schema regeneration writes to the ignored review file `prisma/auth.generated.prisma`. Review and merge auth model changes into `prisma/schema.prisma`; never replace the application schema blindly.
 
-Do not commit real database, OAuth, SMTP, or bootstrap credentials.
+Do not commit real database, SMTP, scheduled-job or bootstrap credentials.
 
 ## Quality commands
 

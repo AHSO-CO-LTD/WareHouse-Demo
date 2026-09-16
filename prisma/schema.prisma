@@ -8,23 +8,33 @@ datasource db {
 }
 
 model User {
-  id            String            @id
-  name          String
-  email         String
-  emailVerified Boolean           @default(false)
-  image         String?
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  role          String?
-  banned        Boolean?          @default(false)
-  banReason     String?
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
-  workspace     Workspace?
-  supportStarts SupportSession[]  @relation("SupportActor")
-  auditEvents   AuditLog[]        @relation("AuditActor")
-  settingEdits  PlatformSetting[] @relation("SettingEditor")
+  id                    String            @id
+  name                  String
+  email                 String
+  emailVerified         Boolean           @default(false)
+  image                 String?
+  phoneNumber           String?           @unique
+  companyName           String?
+  birthYear             Int?
+  termsAcceptedAt       DateTime?
+  privacyAcceptedAt     DateTime?
+  termsVersion          String?
+  privacyVersion        String?
+  marketingEmailConsent Boolean           @default(false)
+  mustChangePassword    Boolean           @default(false)
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  role                  String?
+  banned                Boolean?          @default(false)
+  banReason             String?
+  banExpires            DateTime?
+  sessions              Session[]
+  accounts              Account[]
+  workspace             Workspace?
+  supportStarts         SupportSession[]  @relation("SupportActor")
+  auditEvents           AuditLog[]        @relation("AuditActor")
+  settingEdits          PlatformSetting[] @relation("SettingEditor")
+  emailDeliveries       EmailDelivery[]
 
   @@unique([email])
   @@map("user")
@@ -36,6 +46,20 @@ enum WorkspaceStatus {
   READ_ONLY
   PURGE_PENDING
   PURGED
+}
+
+enum StorageClass {
+  LIGHT
+  MEDIUM
+  HEAVY
+}
+
+enum LocationCodeKind {
+  WAREHOUSE
+  ZONE
+  RACK
+  RACK_LEVEL
+  SLOT
 }
 
 enum AppLocale {
@@ -65,6 +89,18 @@ enum AuditResult {
   FAILURE
 }
 
+enum EmailDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum TransactionalEmailType {
+  EMAIL_VERIFIED_WELCOME
+  DEMO_ACTIVATED
+  PASSWORD_CHANGED
+}
+
 model Workspace {
   id           String          @id @default(uuid()) @db.Uuid
   ownerUserId  String          @unique
@@ -89,6 +125,13 @@ model Workspace {
   consents        ConsentRecord[]
   supportSessions SupportSession[]
   auditEvents     AuditLog[]
+  emailDeliveries EmailDelivery[]
+  warehouses      Warehouse[]
+  zones           Zone[]
+  racks           Rack[]
+  rackLevels      RackLevel[]
+  slots           Slot[]
+  locationCodes   LocationCodeRegistry[]
 
   @@index([status, expiresAt])
   @@index([status, purgeAt])
@@ -116,6 +159,132 @@ model WorkspaceLimit {
   updatedAt                 DateTime  @updatedAt
 
   @@map("workspace_limit")
+}
+
+model Warehouse {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  description  String?
+  storageClass StorageClass?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  zones Zone[]
+
+  @@unique([id, workspaceId])
+  @@unique([workspaceId, code])
+  @@unique([workspaceId, name])
+  @@index([workspaceId, createdAt])
+  @@map("warehouse")
+}
+
+model Zone {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  warehouseId  String        @db.Uuid
+  warehouse    Warehouse     @relation(fields: [warehouseId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code         String        
+  name         String
+  description  String?
+  storageClass StorageClass?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  racks Rack[]
+
+  @@unique([id, workspaceId])
+  @@unique([warehouseId, code])
+  @@unique([warehouseId, name])
+  @@index([workspaceId, warehouseId])
+  @@map("zone")
+}
+
+model Rack {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  zoneId       String        @db.Uuid
+  zone         Zone          @relation(fields: [zoneId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code         String
+  name         String
+  description  String?
+  storageClass StorageClass?
+  configuredLevelCount Int @default(1)
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  levels RackLevel[]
+
+  @@unique([id, workspaceId])
+  @@unique([zoneId, code])
+  @@unique([zoneId, name])
+  @@index([workspaceId, zoneId])
+  @@map("rack")
+}
+
+model RackLevel {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  rackId       String        @db.Uuid
+  rack         Rack          @relation(fields: [rackId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code         String
+  sequence     Int
+  name         String
+  storageClass StorageClass?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  slots Slot[]
+
+  @@unique([id, workspaceId])
+  @@unique([rackId, code])
+  @@unique([rackId, name])
+  @@unique([rackId, sequence])
+  @@index([workspaceId, rackId])
+  @@map("rack_level")
+}
+
+model LocationCodeRegistry {
+  workspaceId   String           @db.Uuid
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code          String
+  locationType  LocationCodeKind
+  locationId    String           @db.Uuid
+  createdAt     DateTime         @default(now())
+
+  @@id([workspaceId, code])
+  @@unique([workspaceId, locationType, locationId])
+  @@index([workspaceId, locationType])
+  @@map("location_code_registry")
+}
+
+model Slot {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  rackLevelId  String        @db.Uuid
+  rackLevel    RackLevel     @relation(fields: [rackLevelId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code         String
+  name         String
+  storageClass StorageClass?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([workspaceId, code])
+  @@unique([rackLevelId, code])
+  @@unique([rackLevelId, name])
+  @@index([workspaceId, rackLevelId])
+  @@map("slot")
 }
 
 model ConsentRecord {
@@ -199,6 +368,29 @@ model PlatformSetting {
   @@map("platform_setting")
 }
 
+model EmailDelivery {
+  id             String                 @id @default(uuid()) @db.Uuid
+  userId         String?
+  user           User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspaceId    String?                @db.Uuid
+  workspace      Workspace?             @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  recipient      String
+  type           TransactionalEmailType
+  idempotencyKey String                 @unique
+  status         EmailDeliveryStatus    @default(PENDING)
+  attemptCount   Int                    @default(0)
+  lastAttemptAt  DateTime?
+  sentAt         DateTime?
+  failureCode    String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId, type, createdAt])
+  @@index([workspaceId, type, createdAt])
+  @@map("email_delivery")
+}
+
 model Session {
   id             String   @id
   expiresAt      DateTime
@@ -232,8 +424,8 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  @@index([userId])
   @@unique([providerId, accountId])
+  @@index([userId])
   @@map("account")
 }
 

@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 
+import { SignOutButton } from "@/components/auth/sign-out-button";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PlatformAccountForm } from "@/components/platform/platform-account-form";
 import { getCurrentUser } from "@/data/current-user";
 import { AUTH_ROLES } from "@/lib/auth/platform-access";
 
@@ -12,7 +15,11 @@ export default async function PlatformPage() {
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/platform/login");
+    redirect("/login");
+  }
+
+  if (user.mustChangePassword) {
+    redirect("/change-password");
   }
 
   if (
@@ -26,20 +33,24 @@ export default async function PlatformPage() {
     <main className="app-placeholder-shell">
       <header className="app-placeholder-header">
         <div>
-          <span className="brand-mark" aria-hidden="true">
-            A
-          </span>
+          <BrandLogo />
           <strong>Platform Control</strong>
         </div>
-        <ThemeToggle />
+        <div className="header-actions">
+          <ThemeToggle />
+          <SignOutButton />
+        </div>
       </header>
       <section className="app-placeholder-content">
-        <p className="eyebrow">{user.role}</p>
-        <h1>Quản trị bản demo AHSO Warehouse.</h1>
-        <p>
-          Tài khoản platform đã được tách khỏi workspace người dùng. Support
-          Mode sẽ yêu cầu lý do, có thời hạn và ghi audit đầy đủ.
-        </p>
+        <h1>Quản trị demo</h1>
+        {user.role === AUTH_ROLES.PLATFORM_DEV ? (
+          <div className="platform-tool">
+            <div>
+              <h2>Tạo tài khoản DEV hoặc ADMIN</h2>
+            </div>
+            <PlatformAccountForm />
+          </div>
+        ) : null}
       </section>
     </main>
   );

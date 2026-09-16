@@ -2,17 +2,20 @@
 
 ## Identity
 
-- Public demo users sign in with Google.
-- Email/password sign-up is disabled; credentials are reserved for provisioned Platform accounts.
+- Public demo users register and sign in with normalized email/password.
+- Email and E.164 phone are unique. Database constraints are authoritative under concurrent registration.
+- Email verification uses a six-digit OTP valid for 10 minutes, stored as a hash and invalidated when resent.
+- Verification and password-reset OTP allow five attempts and at most five sends per hour; the UI adds a 60-second resend cooldown.
 - Password length is 12-128 characters and Better Auth stores the password hash.
 - Password reset revokes existing sessions.
-- OAuth tokens are encrypted at rest by Better Auth.
+- The bootstrap DEV uses an approved temporary password entered outside source and must change it before accessing platform functions.
 
-## Account linking
+## Email behavior
 
-- Implicit same-email linking is disabled.
-- A signed-in user must explicitly start Google linking.
-- Different-email linking and unlinking the last authentication method are disabled.
+- OTP email is sent only on explicit registration, resend or reset actions.
+- Welcome, demo activation and password-change messages are deduplicated by business-event key.
+- OTP values and email bodies are never stored in delivery logs.
+- Marketing email requires explicit consent and remains separate from mandatory account-security messages.
 
 ## Authorization
 
@@ -29,14 +32,14 @@
 
 ## Secrets and logging
 
-- Database, OAuth, SMTP, Better Auth and Server Action keys remain outside Git.
+- Database, SMTP, Better Auth, scheduled-job and Server Action keys remain outside Git.
 - Passwords, access tokens, reset tokens and secrets must never be logged or written into audit metadata.
 - Production errors return safe user messages; technical details belong in structured logs with a correlation ID.
 
 ## Remaining release gates
 
-- Rate limiting for login, reset, onboarding, consultation and expensive exports.
+- Distributed rate-limit storage if deployment expands beyond one VPS instance.
 - Tenant isolation and authorization integration tests against PostgreSQL.
-- SMTP reset flow and one-time token acceptance.
+- SMTP verification/reset flow, OTP expiry/attempt limits and delivery deduplication.
 - Support Mode enforcement and before/after audit tests.
 - HTTPS, trusted proxy/origin and secure-cookie verification on the VPS.

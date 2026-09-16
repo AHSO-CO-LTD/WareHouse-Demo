@@ -15,6 +15,16 @@
 - Tenant foundation: `workspace`, `workspace_limit`, `consent_record`.
 - Platform controls: `support_session`, `platform_setting`, `audit_log`.
 
+`20260915090000_email_otp_auth` adds normalized phone/profile/consent and forced-password-change fields to `user`, plus `email_delivery` metadata for deduplicated non-OTP transactional messages. OTP content is never stored in `email_delivery`. A functional unique index on `LOWER(email)` and a unique E.164 phone constraint protect registration under concurrent requests.
+
+`20260916130000_add_warehouse_hierarchy` adds the tenant-isolated location hierarchy: `warehouse`, `zone`, `rack`, `rack_level`, and `slot`. Each row carries `workspaceId`, an optimistic `version`, timestamps, and an optional `StorageClass`. Composite parent/workspace foreign keys prevent cross-workspace hierarchy links; parent deletion is restrictive and workspace deletion remains cascading.
+
+`20260916143000_enforce_workspace_location_codes` adds a required code to `rack_level` and a shared `location_code_registry`. It reserves every location code once per workspace across all five hierarchy tables, normalizes persisted codes to uppercase, and refuses migration if existing codes are ambiguous. Both hierarchy migrations have been applied to the configured PostgreSQL database.
+
+`20260916150000_enforce_parent_scoped_location_names` enforces unique names at the direct parent scope: workspace for warehouses, then warehouse, zone, rack, and rack level respectively. It refuses migration if existing names conflict and permits the same name under a different parent.
+
+`20260916170000_add_rack_configured_level_count` stores each rack's available level positions independently of the currently existing `RackLevel` rows. It backfills the highest existing position, preserving deliberate empty positions after a level is deleted.
+
 The external identity pair `(providerId, accountId)` is unique. A user owns at most one workspace. Workspace limits are copied into a one-to-one snapshot so a future global policy change does not silently alter an existing demo.
 
 ## Lifecycle
@@ -31,8 +41,13 @@ The external identity pair `(providerId, accountId)` is unique. A user owns at m
 - Important business mutations and their audit entry share one transaction.
 - Optimistic concurrency uses the `version` field where concurrent updates are possible.
 - Domain tables introduced in later phases must carry `workspaceId` and query-supporting indexes.
+- Warehouse hierarchy create/update/delete actions use serializable transactions with bounded retry. Every mutation is scoped to the workspace derived from the session and writes an audit row in the same transaction.
+- Location codes are normalized to uppercase and unique across every warehouse location type within a workspace. The registry is updated in the same transaction as create/update/delete.
+- Location names are unique within their direct parent. Database conflicts are mapped to an explicit domain validation message.
+- Rack layers and each layer's configured slot count are created and synchronized in the same serializable transaction. A rack keeps its configured level positions even if a middle level is removed. Empty levels can compact the levels above only while none has product assignments; explicit move/swap operations otherwise regenerate affected level/slot codes and registry records atomically.
+- At purge time, warehouse hierarchy data is deleted child-first in the same transaction that marks the workspace `PURGED`.
 - Inventory quantity and money will use PostgreSQL decimal types, not floating point.
 
 ## Migration status
 
-The initial SQL was generated and schema validation passed. It has not been executed against a real PostgreSQL database yet, so database runtime behavior is not verified.
+All seven committed migrations have been applied successfully to the configured local PostgreSQL database. Application workflow and cross-workspace isolation still require dedicated runtime verification.

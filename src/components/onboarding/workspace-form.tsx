@@ -2,85 +2,72 @@
 
 import { useActionState } from "react";
 
-import {
-  createWorkspaceAction,
-  initialOnboardingState,
-} from "@/app/onboarding/actions";
+import { createWorkspaceAction } from "@/app/onboarding/actions";
+import { initialOnboardingState } from "@/app/onboarding/state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function FieldError({ errors }: { errors?: string[] }) {
-  if (!errors?.length) {
-    return null;
-  }
-
-  return (
+  return errors?.[0] ? (
     <p className="form-error" role="alert">
       {errors[0]}
     </p>
-  );
+  ) : null;
 }
 
-export function WorkspaceForm({ email }: { email: string }) {
+export function WorkspaceForm({
+  name,
+  email,
+  phoneNumber,
+  companyName,
+}: {
+  name: string;
+  email: string;
+  phoneNumber: string | null;
+  companyName: string | null;
+}) {
   const [state, formAction, isPending] = useActionState(
     createWorkspaceAction,
     initialOnboardingState,
   );
+  const suggestedName = companyName || `Kho demo của ${name}`;
 
   return (
     <form className="workspace-form" action={formAction}>
       <div className="field-group">
-        <label htmlFor="displayName">Tên công ty</label>
-        <input
+        <Label htmlFor="displayName">Tên kho demo</Label>
+        <Input
           id="displayName"
           name="displayName"
           type="text"
-          autoComplete="organization"
+          className="h-12"
+          defaultValue={suggestedName}
           minLength={2}
           maxLength={120}
-          aria-describedby="displayName-error"
+          aria-describedby="displayName-help displayName-error"
           required
         />
+        <small id="displayName-help">Bạn có thể đổi tên này sau.</small>
         <div id="displayName-error">
           <FieldError errors={state.fieldErrors.displayName} />
         </div>
       </div>
 
-      <div className="field-group">
-        <label htmlFor="contactName">Người liên hệ</label>
-        <input
-          id="contactName"
-          name="contactName"
-          type="text"
-          autoComplete="name"
-          minLength={2}
-          maxLength={100}
-          aria-describedby="contactName-error"
-          required
-        />
-        <div id="contactName-error">
-          <FieldError errors={state.fieldErrors.contactName} />
+      <dl className="profile-summary">
+        <div>
+          <dt>Người đăng ký</dt>
+          <dd>{name}</dd>
         </div>
-      </div>
-
-      <div className="field-group">
-        <label htmlFor="contactEmail">Email liên hệ</label>
-        <input id="contactEmail" type="email" value={email} disabled />
-        <small>Email lấy từ tài khoản Google và không thể đổi tại đây.</small>
-      </div>
-
-      <div className="field-group">
-        <label htmlFor="contactPhone">Số điện thoại (không bắt buộc)</label>
-        <input
-          id="contactPhone"
-          name="contactPhone"
-          type="tel"
-          autoComplete="tel"
-          maxLength={30}
-          aria-describedby="contactPhone-error"
-        />
-        <div id="contactPhone-error">
-          <FieldError errors={state.fieldErrors.contactPhone} />
+        <div>
+          <dt>Email</dt>
+          <dd>{email}</dd>
         </div>
-      </div>
+        <div>
+          <dt>Số điện thoại</dt>
+          <dd>{phoneNumber ?? "Chưa có"}</dd>
+        </div>
+      </dl>
 
       {state.message ? (
         <p className="form-error" role="alert">
@@ -88,12 +75,12 @@ export function WorkspaceForm({ email }: { email: string }) {
         </p>
       ) : null}
 
-      <button
-        className="primary-button primary-button--full"
+      <Button
+        className="h-12 w-full"
         disabled={isPending}
       >
-        {isPending ? "Đang khởi tạo..." : "Bắt đầu bản demo"}
-      </button>
+        {isPending ? "Đang tạo kho..." : "Tạo kho demo"}
+      </Button>
     </form>
   );
 }
