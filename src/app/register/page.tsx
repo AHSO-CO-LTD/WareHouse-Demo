@@ -8,9 +8,7 @@ export const metadata = {
 export default function RegisterPage() {
   return (
     <AuthPage
-      eyebrow="Bắt đầu bản demo"
-      title="Tạo tài khoản."
-      description="Chỉ mất một bước đăng ký và một mã OTP. 30 ngày dùng thử chỉ bắt đầu sau khi bạn hoàn tất khởi tạo kho."
+      title="Tạo tài khoản"
       wide
     >
       <RegistrationForm />

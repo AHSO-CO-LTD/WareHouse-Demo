@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth/client";
 
 const APP_STORAGE_PREFIX = "ahso.";
@@ -22,7 +24,7 @@ type SignOutButtonProps = {
 };
 
 export function SignOutButton({
-  className = "text-button",
+  className,
   onPendingChange,
 }: SignOutButtonProps) {
   const [isPending, setIsPending] = useState(false);
@@ -38,6 +40,7 @@ export function SignOutButton({
 
       if (result.error) {
         setErrorMessage("Không thể đăng xuất. Vui lòng thử lại.");
+        toast.error("Không thể đăng xuất. Vui lòng thử lại.");
         return;
       }
 
@@ -46,6 +49,7 @@ export function SignOutButton({
       window.location.assign("/login");
     } catch {
       setErrorMessage("Không thể đăng xuất. Vui lòng thử lại.");
+      toast.error("Không thể đăng xuất. Vui lòng thử lại.");
     } finally {
       setIsPending(false);
       onPendingChange?.(false);
@@ -54,14 +58,16 @@ export function SignOutButton({
 
   return (
     <div className="sign-out-control">
-      <button
-        className={className}
+      <Button
+        variant="ghost"
+        size="sm"
+        className={`h-10 px-4 text-sm${className ? ` ${className}` : ""}`}
         type="button"
         onClick={handleSignOut}
         disabled={isPending}
       >
         {isPending ? "Đang đăng xuất..." : "Đăng xuất"}
-      </button>
+      </Button>
       {errorMessage ? (
         <p className="form-error" role="alert">
           {errorMessage}

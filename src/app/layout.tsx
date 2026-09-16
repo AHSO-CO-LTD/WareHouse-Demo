@@ -1,36 +1,36 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Be_Vietnam_Pro } from "next/font/google";
+
+import { AppToaster } from "@/components/ui/app-toaster";
+import { ThemeBootstrap } from "@/components/theme-bootstrap";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const beVietnamPro = Be_Vietnam_Pro({
+  variable: "--font-be-vietnam-pro",
   subsets: ["latin", "vietnamese"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin", "vietnamese"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
   title: "AHSO Warehouse Demo",
   description: "Trải nghiệm quản lý nhập, xuất, tồn và kiểm kê theo vị trí.",
+  icons: {
+    icon: "/images/favicon.ico",
+    shortcut: "/images/favicon.ico",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="vi" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              "try{if(localStorage.getItem('ahso-theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}",
-          }}
-        />
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        {children}
+      <body className={beVietnamPro.variable}>
+        <ThemeBootstrap />
+        <TooltipProvider>
+          {children}
+          <AppToaster />
+        </TooltipProvider>
       </body>
     </html>
   );

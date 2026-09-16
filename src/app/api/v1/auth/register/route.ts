@@ -4,7 +4,7 @@ import { CURRENT_POLICIES } from "@/config/policies";
 import {
   normalizeEmail,
   normalizePhoneNumber,
-  parseOptionalDateOfBirth,
+  parseOptionalBirthYear,
 } from "@/lib/auth/registration";
 import { AUTH_ROLES } from "@/lib/auth/platform-access";
 import { auth } from "@/lib/server/auth";
@@ -20,10 +20,6 @@ const registerSchema = z
     email: z
       .email({ error: "Email không đúng định dạng." })
       .max(254, "Email không được vượt quá 254 ký tự."),
-    callingCode: z
-      .string()
-      .trim()
-      .regex(/^\+\d{1,3}$/, "Mã quốc gia không hợp lệ."),
     phoneNumber: z
       .string()
       .trim()
@@ -33,7 +29,7 @@ const registerSchema = z
       .string()
       .trim()
       .max(120, "Tên công ty không được vượt quá 120 ký tự."),
-    dateOfBirth: z.string().trim().max(10, "Ngày sinh không đúng định dạng."),
+    birthYear: z.string().trim().max(4, "Năm sinh không đúng định dạng."),
     password: z
       .string()
       .min(12, "Mật khẩu phải có ít nhất 12 ký tự.")
@@ -98,11 +94,8 @@ export async function POST(request: Request) {
   }
 
   const email = normalizeEmail(parsed.data.email);
-  const phoneNumber = normalizePhoneNumber(
-    parsed.data.phoneNumber,
-    parsed.data.callingCode,
-  );
-  const dateOfBirth = parseOptionalDateOfBirth(parsed.data.dateOfBirth);
+  const phoneNumber = normalizePhoneNumber(parsed.data.phoneNumber);
+  const birthYear = parseOptionalBirthYear(parsed.data.birthYear);
 
   if (!phoneNumber) {
     return errorResponse(
@@ -115,9 +108,9 @@ export async function POST(request: Request) {
     );
   }
 
-  if (dateOfBirth === undefined) {
-    return errorResponse(400, "VALIDATION_ERROR", "Ngày sinh không hợp lệ.", {
-      dateOfBirth: ["Ngày sinh phải trong quá khứ và không quá 120 năm."],
+  if (birthYear === undefined) {
+    return errorResponse(400, "VALIDATION_ERROR", "Năm sinh không hợp lệ.", {
+      birthYear: ["Năm sinh phải trong 120 năm gần đây và không ở tương lai."],
     });
   }
 
@@ -167,7 +160,7 @@ export async function POST(request: Request) {
         ...(parsed.data.companyName
           ? { companyName: parsed.data.companyName }
           : {}),
-        ...(dateOfBirth ? { dateOfBirth } : {}),
+        ...(birthYear !== null ? { birthYear } : {}),
         termsAcceptedAt: new Date(),
         privacyAcceptedAt: new Date(),
         termsVersion: CURRENT_POLICIES.terms.version,

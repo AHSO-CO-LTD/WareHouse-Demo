@@ -8,9 +8,7 @@ export const metadata = {
 export default function VerifyEmailPage() {
   return (
     <AuthPage
-      eyebrow="Bước 2 / 2"
-      title="Kiểm tra email."
-      description="Nhập mã OTP gồm 6 chữ số. Bạn có thể dán cả mã và không cần mở liên kết trên cùng thiết bị."
+      title="Xác minh email"
     >
       <EmailOtpForm />
     </AuthPage>

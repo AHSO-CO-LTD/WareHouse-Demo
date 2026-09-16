@@ -79,7 +79,7 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 - `Warehouse`, `Zone`, `Rack`, `RackLevel`, `Slot`.
 - `RackType`, `RackTemplate`, `Layout`, `LayoutObject`, `LayoutRevision`.
 - Parent FK dùng restrictive delete khi còn dữ liệu con hoặc tồn kho.
-- Mã vị trí unique trong workspace và cấp cha phù hợp.
+- Mã vị trí unique trên toàn workspace, xuyên Kho/Khu/Kệ/Tầng/Ô; tầng vừa có mã unique vừa có số thứ tự unique trong kệ.
 
 ### Product catalog
 
@@ -192,8 +192,8 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 | ----- | -------------------------------------------------------------------------- | ----------- |
 | 0     | Scaffold, project docs, ADRs, environment schema                           | Done        |
 | 1     | PostgreSQL schema foundation, auth, onboarding, tenant isolation           | In Progress |
-| 2     | Demo lifecycle, quotas, seed/reset, platform accounts                      | Pending     |
-| 3     | Warehouse hierarchy, products, units, lots, QR                             | Pending     |
+| 2     | Demo lifecycle, quotas, seed/reset, platform accounts                      | In Progress |
+| 3     | Warehouse hierarchy, products, units, lots, QR                             | In Progress |
 | 4     | Inventory ledger and all core stock workflows                              | Pending     |
 | 5     | Projects, CRM, estimates, quotations, VAT, bilingual PDF                   | Pending     |
 | 6     | Dashboards, audit, email center, consultation pipeline                     | Pending     |
@@ -207,6 +207,7 @@ Inventory core must stabilize before layout editing begins. The layout phase may
 - Done: remove Google OAuth/account linking from the approved architecture and source configuration.
 - Done: public email/password registration fields, E.164 phone normalization and database uniqueness constraints.
 - Done: six-digit hashed email OTP foundation for verification and password reset, including resend/attempt rate limits.
+- Done: password-reset OTP is verified before the new-password page; a short-lived encrypted HttpOnly grant prevents the OTP from entering JavaScript storage and lets only the server submit it to Better Auth during completion.
 - Done: forced first-login password change foundation for the bootstrap DEV and DEV permission to create DEV/ADMIN.
 - Done: SMTP transactional templates for OTP, verified welcome, demo activation and password-change security notice.
 - Done: protected seven-day unverified-account cleanup endpoint.
@@ -215,6 +216,22 @@ Inventory core must stabilize before layout editing begins. The layout phase may
 - Done: apply both committed migrations to the configured PostgreSQL database and verify the required auth/workspace tables and new identity columns.
 - Done: authenticate to the configured SMTP service and deliver one test message successfully.
 - Pending: smoke-test real OTP templates, login/session revocation and scheduled cleanup on the VPS-like environment.
+
+### Phase 2A lifecycle amendment — 16/09/2026
+
+- Done: server-only lifecycle state evaluation and write guard for non-active or time-expired workspaces.
+- Done: authenticated, bounded, conditional-transition internal lifecycle job with audit entries for lock, purge-pending and terminal purge transitions.
+- Done: current demo screen shows effective active/read-only/purged lifecycle status.
+- Deferred: real business-data seed/reset and quota enforcement require Phase 3 domain models.
+- Deferred: lifecycle reminder/delivery operations require the bounded-retry email worker in Phase 6.
+
+### Phase 3A warehouse hierarchy amendment — 16/09/2026
+
+- Done in source: tenant-scoped `Warehouse → Zone → Rack → RackLevel → Slot` schema, Prisma migration and direct tree-management screen.
+- Done in source: demo quotas, active-workspace write guard, restrictive child removal, storage-class inheritance, serializable writes with bounded retry, optimistic version checks and same-transaction audit entries.
+- Done in source: workspace lifecycle purge removes the implemented warehouse hierarchy child-first before the terminal lifecycle audit entry.
+- Done: applied the hierarchy migrations, including workspace-wide location-code registry, to the configured PostgreSQL database.
+- Pending: run tenant isolation, quota/concurrency, lifecycle purge and Light/Dark UI verification.
 
 ## 10. Verification plan
 

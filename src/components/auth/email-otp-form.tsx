@@ -4,6 +4,10 @@ import Link from "next/link";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 
 const EMAIL_STORAGE_KEY = "ahso.pendingVerificationEmail";
@@ -116,10 +120,11 @@ export function EmailOtpForm() {
   return (
     <form className="auth-form" onSubmit={handleVerify}>
       <div className="field-group">
-        <label htmlFor="verificationEmail">Email</label>
-        <input
+        <Label htmlFor="verificationEmail">Email</Label>
+        <Input
           id="verificationEmail"
           type="email"
+          className="h-12"
           autoComplete="email"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
@@ -128,22 +133,20 @@ export function EmailOtpForm() {
       </div>
 
       <div className="field-group">
-        <label htmlFor="verificationOtp">Mã OTP</label>
-        <input
-          className="otp-input"
+        <Label htmlFor="verificationOtp">Mã OTP</Label>
+        <InputOTP
           id="verificationOtp"
-          type="text"
-          inputMode="numeric"
           autoComplete="one-time-code"
-          pattern="[0-9]{6}"
           maxLength={6}
           value={otp}
-          onChange={(event) =>
-            setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))
-          }
+          onChange={(value) => setOtp(value)}
           autoFocus
           required
-        />
+        >
+          <InputOTPGroup>
+            {Array.from({ length: 6 }, (_, index) => <InputOTPSlot key={index} index={index} />)}
+          </InputOTPGroup>
+        </InputOTP>
         <small>Mã có hiệu lực trong 10 phút.</small>
       </div>
 
@@ -153,15 +156,16 @@ export function EmailOtpForm() {
         </p>
       ) : null}
 
-      <button
-        className="primary-button primary-button--full"
+      <Button
+        className="h-12 w-full"
         disabled={isVerifying}
       >
         {isVerifying ? "Đang xác minh..." : "Xác minh và tiếp tục"}
-      </button>
+      </Button>
 
-      <button
-        className="secondary-button"
+      <Button
+        variant="outline"
+        className="h-12"
         type="button"
         onClick={handleResend}
         disabled={cooldown > 0 || isResending || !email.trim()}
@@ -171,7 +175,7 @@ export function EmailOtpForm() {
           : cooldown > 0
             ? `Gửi lại sau ${cooldown}s`
             : "Gửi lại OTP"}
-      </button>
+      </Button>
 
       <p className="form-footnote">
         Sai email? <Link href="/register">Đăng ký lại bằng email khác</Link>

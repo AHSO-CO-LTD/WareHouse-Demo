@@ -15,7 +15,10 @@ import {
   platformAccessControl,
   platformAuthRoles,
 } from "@/lib/auth/platform-access";
-import { isNormalizedPhoneNumber } from "@/lib/auth/registration";
+import {
+  isNormalizedPhoneNumber,
+  isValidBirthYear,
+} from "@/lib/auth/registration";
 import {
   sendOtpEmail,
   sendPasswordChangedEmail,
@@ -121,11 +124,11 @@ export function createAuth(database: PrismaClient, env: ServerEnv) {
               typeof value === "string" && value.trim() ? value.trim() : null,
           },
         },
-        dateOfBirth: {
-          type: "date",
+        birthYear: {
+          type: "number",
           required: false,
           validator: {
-            input: z.date(),
+            input: z.number().int().refine(isValidBirthYear),
           },
         },
         termsAcceptedAt: {

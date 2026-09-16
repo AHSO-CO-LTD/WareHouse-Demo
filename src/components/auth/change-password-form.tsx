@@ -4,6 +4,9 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 
 export function ChangePasswordForm() {
@@ -58,22 +61,24 @@ export function ChangePasswordForm() {
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <div className="field-group">
-        <label htmlFor="currentPassword">Mật khẩu tạm thời</label>
-        <input
+        <Label htmlFor="currentPassword">Mật khẩu tạm thời</Label>
+        <Input
           id="currentPassword"
           name="currentPassword"
           type="password"
+          className="h-12"
           autoComplete="current-password"
           required
           autoFocus
         />
       </div>
       <div className="field-group">
-        <label htmlFor="mandatoryNewPassword">Mật khẩu mới</label>
-        <input
+        <Label htmlFor="mandatoryNewPassword">Mật khẩu mới</Label>
+        <Input
           id="mandatoryNewPassword"
           name="newPassword"
           type="password"
+          className="h-12"
           autoComplete="new-password"
           minLength={12}
           maxLength={128}
@@ -82,11 +87,12 @@ export function ChangePasswordForm() {
         <small>Từ 12 đến 128 ký tự và khác mật khẩu tạm thời.</small>
       </div>
       <div className="field-group">
-        <label htmlFor="mandatoryConfirmPassword">Xác nhận mật khẩu mới</label>
-        <input
+        <Label htmlFor="mandatoryConfirmPassword">Xác nhận mật khẩu mới</Label>
+        <Input
           id="mandatoryConfirmPassword"
           name="confirmPassword"
           type="password"
+          className="h-12"
           autoComplete="new-password"
           minLength={12}
           maxLength={128}
@@ -98,16 +104,13 @@ export function ChangePasswordForm() {
           {message}
         </p>
       ) : null}
-      <button
-        className="primary-button primary-button--full"
+      <Button
+        className="h-12 w-full"
         disabled={isPending}
       >
         {isPending ? "Đang đổi mật khẩu..." : "Đổi mật khẩu và tiếp tục"}
-      </button>
-      <SignOutButton
-        className="secondary-button"
-        onPendingChange={setIsPending}
-      />
+      </Button>
+      <SignOutButton onPendingChange={setIsPending} />
     </form>
   );
 }

@@ -4,6 +4,9 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 
 export function ForgotPasswordForm() {
@@ -37,17 +40,18 @@ export function ForgotPasswordForm() {
       "ahso.passwordResetOtpSentAt",
       String(Date.now()),
     );
-    router.push("/reset-password");
+    router.push("/verify-reset-otp");
   }
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <div className="field-group">
-        <label htmlFor="resetEmail">Email đăng nhập</label>
-        <input
+        <Label htmlFor="resetEmail">Email đăng nhập</Label>
+        <Input
           id="resetEmail"
           name="email"
           type="email"
+          className="h-12"
           autoComplete="email"
           required
           autoFocus
@@ -61,12 +65,12 @@ export function ForgotPasswordForm() {
           {message}
         </p>
       ) : null}
-      <button
-        className="primary-button primary-button--full"
+      <Button
+        className="h-12 w-full"
         disabled={isPending}
       >
         {isPending ? "Đang gửi..." : "Gửi OTP đặt lại mật khẩu"}
-      </button>
+      </Button>
       <Link className="back-link" href="/login">
         Quay lại đăng nhập
       </Link>

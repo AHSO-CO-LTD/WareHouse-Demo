@@ -21,9 +21,7 @@ export default async function ChangePasswordPage() {
 
   return (
     <AuthPage
-      eyebrow="Bảo vệ tài khoản"
-      title="Đổi mật khẩu lần đầu."
-      description="Mật khẩu hiện tại chỉ dùng để bootstrap. Hãy đổi mật khẩu trước khi sử dụng chức năng quản trị."
+      title="Đổi mật khẩu"
     >
       <ChangePasswordForm />
     </AuthPage>

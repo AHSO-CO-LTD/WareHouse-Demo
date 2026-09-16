@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { BrandLogo } from "@/components/brand-logo";
 import { WorkspaceForm } from "@/components/onboarding/workspace-form";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { getCurrentUser } from "@/data/current-user";
@@ -39,9 +40,7 @@ export default async function OnboardingPage() {
     <main className="onboarding-shell">
       <header className="onboarding-header">
         <div>
-          <span className="brand-mark" aria-hidden="true">
-            A
-          </span>
+          <BrandLogo />
           <span>AHSO Warehouse</span>
         </div>
         <div className="header-actions">
@@ -51,12 +50,7 @@ export default async function OnboardingPage() {
       </header>
       <section className="onboarding-layout">
         <div className="onboarding-intro">
-          <p className="eyebrow">Thông tin bản demo</p>
-          <h1>Thiết lập không gian thử nghiệm.</h1>
-          <p>
-            Dữ liệu của bạn được tách riêng. Thời hạn 30 ngày bắt đầu sau khi
-            hoàn tất bước này.
-          </p>
+          <h1>Tạo kho demo</h1>
         </div>
         <div className="onboarding-form-panel">
           <WorkspaceForm

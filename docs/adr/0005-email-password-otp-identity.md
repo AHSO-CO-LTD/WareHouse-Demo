@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 15/09/2026
 - Supersedes: ADR 0002 for identity and registration decisions
+- Superseded in part by: ADR 0006 for optional birth information
 
 ## Context
 

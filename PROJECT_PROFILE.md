@@ -2,7 +2,7 @@
 
 ## Project
 
-- Trạng thái: Đang triển khai. Phase 0 hoàn tất, Phase 1 đang thực hiện.
+- Trạng thái: Đang triển khai. Foundation/auth, lifecycle và Phase 3A warehouse hierarchy đã có trong source; hierarchy migrations đã áp dụng, còn xác minh runtime/UI.
 - Mục đích: Sản phẩm web demo công khai để người dùng trải nghiệm quản lý kho và gửi yêu cầu tư vấn cho AHSO.
 - Bài toán: Thay thế cách quản lý nhập, xuất, tồn, kiểm kê và vị trí kho thủ công bằng Excel trong một môi trường dùng thử có kiểm soát.
 - Môi trường: Web public triển khai trên VPS, sử dụng qua desktop và trình duyệt di động.
@@ -16,7 +16,7 @@
 - Prisma ORM và migrations.
 - Better Auth với email/password và email OTP cho người dùng demo và Platform DEV/ADMIN.
 - Nodemailer dùng SMTP phía server cho email giao dịch.
-- UI theo hệ component composable kiểu shadcn, responsive desktop-first.
+- UI dùng shadcn/ui (Radix base) qua `src/components/ui`, responsive desktop-first; Sonner là toast system duy nhất.
 - Runtime và package được pin chính xác trong `package.json`; Node.js 24.x, Next.js 16.3.5, Better Auth 1.7.5 và Prisma 7.10.0.
 
 ## Architecture
@@ -42,7 +42,7 @@
 
 - Đăng ký bằng email/password; email là username và phải xác minh bằng OTP trước khi truy cập.
 - Email và số điện thoại chuẩn hóa là duy nhất toàn hệ thống; số điện thoại dùng chuẩn E.164.
-- Form đăng ký yêu cầu họ tên, email, số điện thoại, mật khẩu và consent; công ty và ngày sinh là tùy chọn.
+- Form đăng ký yêu cầu họ tên, email, số điện thoại, mật khẩu và consent; công ty và năm sinh là tùy chọn. Không thu thập ngày/tháng sinh.
 - Hoàn tất onboarding để tạo workspace và bắt đầu 30 ngày dùng thử.
 - Là chủ duy nhất của workspace và có quyền thao tác các chức năng demo.
 - Phê duyệt hai người bị khóa tắt vì workspace chỉ có một người dùng.
@@ -64,11 +64,15 @@
 - DEV bootstrap bắt buộc đổi mật khẩu ngay lần đăng nhập đầu tiên và DEV có thể tạo thêm DEV/ADMIN.
 - Mật khẩu băm một chiều; hỗ trợ đổi/quên mật khẩu qua SMTP và thu hồi session cũ.
 - Better Auth email OTP dùng mã 6 số, hiệu lực 10 phút, tối đa 5 lần nhập sai và lưu hash.
+- Luồng quên mật khẩu xác minh OTP trước khi mở trang đặt mật khẩu mới; quyền reset là grant mã hóa trong cookie HttpOnly ngắn hạn, không đưa OTP vào JavaScript, localStorage hoặc sessionStorage.
 - Google OAuth và account linking không thuộc hệ thống.
 
 ## Warehouse domain
 
 - Cấu trúc: `Kho → Phân khu → Kệ → Tầng kệ → Slot`.
+- Phase 3A source đã có hierarchy tenant-scoped, quota, audit, lifecycle write guard và direct tree management. Kệ giữ số vị trí tầng cấu hình riêng với các tầng đang tồn tại; các tầng/ô được tạo tự động bằng mã dẫn xuất từ mã kệ. Xóa tầng trống có thể đôn các tầng trống phía trên, còn chuyển/đổi tầng là thao tác xác nhận riêng. QR, products, lots and inventory remain later Phase 3/4 work.
+- Mã vị trí được chuẩn hóa chữ hoa và unique xuyên toàn bộ năm cấp trong một workspace; tầng kệ có cả mã unique và số thứ tự unique trong kệ.
+- Tên vị trí unique trong phạm vi cấp cha trực tiếp; cùng tên được phép ở hai nhánh khác nhau.
 - Tồn chi tiết: `Sản phẩm + lô + slot + trạng thái + số lượng`.
 - Tổng tồn cấp tầng/kệ/khu/kho được tổng hợp từ slot, không nhập hoặc lưu độc lập như nguồn sự thật khác.
 - Chứng từ đã xác nhận là bất biến; sửa sai bằng chứng từ đảo/điều chỉnh liên kết chứng từ gốc.
@@ -125,6 +129,8 @@
 
 - Thời hạn cố định 30 ngày từ lúc tạo workspace.
 - Ngày 30 chuyển chỉ đọc; ngày 37 xóa dữ liệu nghiệp vụ.
+- Job nội bộ `POST /api/v1/internal/jobs/process-workspace-lifecycle` chuyển trạng thái lifecycle theo lô tối đa 100 workspace; xác thực Bearer `INTERNAL_JOB_SECRET`, cập nhật có điều kiện và audit từng transition. VPS scheduler sẽ gọi job này khi Phase 8 triển khai vận hành.
+- Trước Phase 3 chưa có dữ liệu nghiệp vụ để xóa; day-37 hiện đánh dấu terminal `PURGED` và giữ owner/workspace để chặn tạo lại trial bằng cùng email.
 - Cho phép người dùng tự reset về seed mẫu hoặc xóa workspace sớm.
 - Hạn mức: 1 kho; 2 khu/kho; 3 kệ/khu; 3 tầng/kệ; 2 slot/tầng; 20 sản phẩm; 5 dự án; 5 hồ sơ công ty/cá nhân; 5 nhà cung cấp; 10 báo giá/dự toán; 100 giao dịch kho.
 
@@ -147,6 +153,8 @@
 - Dùng custom dialog; không dùng browser alert/confirm/prompt.
 - Form có validation inline, dirty-state protection và xác nhận cho Save/reset/xóa.
 - Loading, error, empty và permission/unavailable state phải rõ ràng.
+- Ngôn ngữ thiết kế bắt buộc nằm tại [Design language](docs/DESIGN_LANGUAGE.md): title-led, tối giản nội dung không thiết yếu, action label trực tiếp, vùng bấm lớn/rõ ràng, tooltip chỉ cho trợ giúp không bắt buộc, và các box cùng hàng phải đồng bộ chiều cao.
+- Trang giới thiệu dự án dùng ảnh kho nội bộ và GSAP ScrollTrigger cho reveal theo cuộn; motion chỉ áp dụng public landing, không chặn thao tác và tôn trọng reduced motion.
 
 ## Logging and audit
 
@@ -182,3 +190,6 @@
 - [ADR 0003 — Immutable inventory ledger](docs/adr/0003-immutable-inventory-ledger.md)
 - [ADR 0004 — Scaled 2D warehouse layout](docs/adr/0004-scaled-2d-warehouse-layout.md)
 - [ADR 0005 — Email/password và email OTP](docs/adr/0005-email-password-otp-identity.md)
+- [ADR 0006 — Tối thiểu hóa dữ liệu năm sinh](docs/adr/0006-birth-year-data-minimization.md)
+- [ADR 0007 — shadcn/ui và Sonner](docs/adr/0007-shadcn-ui-and-sonner.md)
+- [Design language](docs/DESIGN_LANGUAGE.md)

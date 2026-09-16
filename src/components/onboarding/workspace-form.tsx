@@ -4,6 +4,9 @@ import { useActionState } from "react";
 
 import { createWorkspaceAction } from "@/app/onboarding/actions";
 import { initialOnboardingState } from "@/app/onboarding/state";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 function FieldError({ errors }: { errors?: string[] }) {
   return errors?.[0] ? (
@@ -33,11 +36,12 @@ export function WorkspaceForm({
   return (
     <form className="workspace-form" action={formAction}>
       <div className="field-group">
-        <label htmlFor="displayName">Tên không gian demo</label>
-        <input
+        <Label htmlFor="displayName">Tên kho demo</Label>
+        <Input
           id="displayName"
           name="displayName"
           type="text"
+          className="h-12"
           defaultValue={suggestedName}
           minLength={2}
           maxLength={120}
@@ -71,12 +75,12 @@ export function WorkspaceForm({
         </p>
       ) : null}
 
-      <button
-        className="primary-button primary-button--full"
+      <Button
+        className="h-12 w-full"
         disabled={isPending}
       >
-        {isPending ? "Đang khởi tạo..." : "Bắt đầu 30 ngày dùng thử"}
-      </button>
+        {isPending ? "Đang tạo kho..." : "Tạo kho demo"}
+      </Button>
     </form>
   );
 }

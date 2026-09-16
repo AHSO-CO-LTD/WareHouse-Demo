@@ -4,6 +4,9 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth/client";
 
 export function LoginForm({ notice }: { notice?: string }) {
@@ -49,24 +52,26 @@ export function LoginForm({ notice }: { notice?: string }) {
         </div>
       ) : null}
       <div className="field-group">
-        <label htmlFor="email">Email</label>
-        <input
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           name="email"
           type="email"
+          className="h-12"
           autoComplete="username"
           required
         />
       </div>
       <div className="field-group">
         <div className="field-label-row">
-          <label htmlFor="password">Mật khẩu</label>
+          <Label htmlFor="password">Mật khẩu</Label>
           <Link href="/forgot-password">Quên mật khẩu?</Link>
         </div>
-        <input
+        <Input
           id="password"
           name="password"
           type="password"
+          className="h-12"
           autoComplete="current-password"
           required
         />
@@ -79,12 +84,12 @@ export function LoginForm({ notice }: { notice?: string }) {
           ) : null}
         </div>
       ) : null}
-      <button
-        className="primary-button primary-button--full"
+      <Button
+        className="h-12 w-full"
         disabled={isPending}
       >
         {isPending ? "Đang đăng nhập..." : "Đăng nhập"}
-      </button>
+      </Button>
       <p className="form-footnote">
         Chưa có tài khoản? <Link href="/register">Đăng ký dùng thử</Link>
       </p>

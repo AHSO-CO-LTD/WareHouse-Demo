@@ -44,3 +44,6 @@ next-env.d.ts
 # generated Prisma client
 /src/generated/prisma
 /prisma/auth.generated.prisma
+
+# Local database recovery artifacts; never commit user data.
+/.local-backups/

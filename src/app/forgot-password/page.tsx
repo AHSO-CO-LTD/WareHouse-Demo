@@ -8,9 +8,7 @@ export const metadata = {
 export default function ForgotPasswordPage() {
   return (
     <AuthPage
-      eyebrow="Khôi phục tài khoản"
-      title="Đặt lại mật khẩu."
-      description="Nhập email đăng nhập. Chúng tôi sẽ gửi OTP nếu tài khoản hợp lệ."
+      title="Đặt lại mật khẩu"
     >
       <ForgotPasswordForm />
     </AuthPage>

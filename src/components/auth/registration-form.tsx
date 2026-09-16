@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { CALLING_CODE_OPTIONS } from "@/lib/auth/registration";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type RegistrationError = {
   code: string;
@@ -18,6 +21,11 @@ type RegistrationResponse = {
   error: RegistrationError | null;
 };
 
+const BIRTH_YEAR_OPTIONS = Array.from(
+  { length: 121 },
+  (_, index) => new Date().getUTCFullYear() - index,
+);
+
 function FieldError({ errors }: { errors?: string[] }) {
   return errors?.[0] ? (
     <p className="form-error" role="alert">
@@ -26,11 +34,156 @@ function FieldError({ errors }: { errors?: string[] }) {
   ) : null;
 }
 
+function RequiredIndicator() {
+  return (
+    <span className="required-indicator" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
+function PasswordVisibilityIcon({ isVisible }: { isVisible: boolean }) {
+  return isVisible ? (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+      <path d="M9.9 4.2A10.5 10.5 0 0 1 12 4c5.2 0 8.8 4.1 9.8 6.6a2 2 0 0 1 0 1.5 12 12 0 0 1-3 4.2" />
+      <path d="M6.2 6.2a12 12 0 0 0-4 4.4 2 2 0 0 0 0 1.5C3.2 14.6 6.8 18.7 12 18.7c1 0 1.9-.2 2.8-.5" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+      <path d="M2.2 12.1a2 2 0 0 1 0-1.5C3.2 8.1 6.8 4 12 4s8.8 4.1 9.8 6.6a2 2 0 0 1 0 1.5C20.8 14.6 17.2 18.7 12 18.7S3.2 14.6 2.2 12.1Z" />
+      <circle cx="12" cy="11.4" r="3.1" />
+    </svg>
+  );
+}
+
+function DropdownChevron({ isOpen }: { isOpen: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      aria-hidden="true"
+      className={isOpen ? "year-picker__chevron year-picker__chevron--open" : "year-picker__chevron"}
+    >
+      <path d="m6 9 6 6 6-6" />
+    </svg>
+  );
+}
+
+function BirthYearField({ errors }: { errors?: string[] }) {
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [value, setValue] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const matchingYears = BIRTH_YEAR_OPTIONS.filter((year) =>
+    year.toString().startsWith(value.trim()),
+  );
+
+  useEffect(() => {
+    function handlePointerDown(event: PointerEvent) {
+      if (!pickerRef.current?.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, []);
+
+  function selectYear(year: number) {
+    setValue(String(year));
+    setIsOpen(false);
+    inputRef.current?.focus();
+  }
+
+  return (
+    <div className="field-group">
+      <Label htmlFor="birthYear">Năm sinh (không bắt buộc)</Label>
+      <div className="year-picker" ref={pickerRef}>
+        <Input
+          ref={inputRef}
+          id="birthYear"
+          name="birthYear"
+          type="text"
+          className="year-picker__input"
+          autoComplete="bday-year"
+          inputMode="numeric"
+          pattern="\\d{4}"
+          maxLength={4}
+          placeholder="1990"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={isOpen}
+          aria-controls="birth-year-options"
+          onChange={(event) => {
+            setValue(event.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setIsOpen(false);
+            }
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setIsOpen(true);
+            }
+          }}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="year-picker__toggle"
+          type="button"
+          aria-label={isOpen ? "Đóng danh sách năm sinh" : "Mở danh sách năm sinh"}
+          aria-expanded={isOpen}
+          aria-controls="birth-year-options"
+          onClick={() => {
+            setIsOpen((open) => !open);
+            inputRef.current?.focus();
+          }}
+        >
+          <DropdownChevron isOpen={isOpen} />
+        </Button>
+        {isOpen ? (
+          <div id="birth-year-options" className="year-picker__menu" role="listbox">
+            {matchingYears.length ? (
+              matchingYears.map((year) => (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  key={year}
+                  className="year-picker__option h-10"
+                  type="button"
+                  role="option"
+                  aria-selected={value === String(year)}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => selectYear(year)}
+                >
+                  {year}
+                </Button>
+              ))
+            ) : (
+              <p className="year-picker__empty">Không có năm phù hợp.</p>
+            )}
+          </div>
+        ) : null}
+      </div>
+      <FieldError errors={errors} />
+    </div>
+  );
+}
+
 export function RegistrationForm() {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const [isPending, setIsPending] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
+    useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [verificationAvailable, setVerificationAvailable] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<
@@ -49,10 +202,9 @@ export function RegistrationForm() {
     const payload = {
       name: String(formData.get("name") ?? ""),
       email: String(formData.get("email") ?? ""),
-      callingCode: String(formData.get("callingCode") ?? "+84"),
       phoneNumber: String(formData.get("phoneNumber") ?? ""),
       companyName: String(formData.get("companyName") ?? ""),
-      dateOfBirth: String(formData.get("dateOfBirth") ?? ""),
+      birthYear: String(formData.get("birthYear") ?? ""),
       password: String(formData.get("password") ?? ""),
       confirmPassword: String(formData.get("confirmPassword") ?? ""),
       acceptTerms: formData.get("acceptTerms") === "on",
@@ -127,11 +279,14 @@ export function RegistrationForm() {
     >
       <div className="form-grid">
         <div className="field-group">
-          <label htmlFor="name">Họ và tên</label>
-          <input
+          <Label htmlFor="name">
+            Họ và tên<RequiredIndicator />
+          </Label>
+          <Input
             id="name"
             name="name"
             type="text"
+            className="h-12"
             autoComplete="name"
             minLength={2}
             maxLength={100}
@@ -141,11 +296,14 @@ export function RegistrationForm() {
         </div>
 
         <div className="field-group">
-          <label htmlFor="email">Email đăng nhập</label>
-          <input
+          <Label htmlFor="email">
+            Email đăng nhập<RequiredIndicator />
+          </Label>
+          <Input
             id="email"
             name="email"
             type="email"
+            className="h-12"
             autoComplete="email"
             maxLength={254}
             required
@@ -154,32 +312,14 @@ export function RegistrationForm() {
         </div>
 
         <div className="field-group">
-          <label htmlFor="callingCode">Mã quốc gia</label>
-          <input
-            id="callingCode"
-            name="callingCode"
-            type="tel"
-            list="calling-code-options"
-            defaultValue="+84"
-            autoComplete="tel-country-code"
-            required
-          />
-          <datalist id="calling-code-options">
-            {CALLING_CODE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </datalist>
-          <FieldError errors={fieldErrors?.callingCode} />
-        </div>
-
-        <div className="field-group">
-          <label htmlFor="phoneNumber">Số điện thoại</label>
-          <input
+          <Label htmlFor="phoneNumber">
+            Số điện thoại<RequiredIndicator />
+          </Label>
+          <Input
             id="phoneNumber"
             name="phoneNumber"
             type="tel"
+            className="h-12"
             autoComplete="tel-national"
             maxLength={24}
             placeholder="0912 345 678"
@@ -189,11 +329,12 @@ export function RegistrationForm() {
         </div>
 
         <div className="field-group">
-          <label htmlFor="companyName">Tên công ty (không bắt buộc)</label>
-          <input
+          <Label htmlFor="companyName">Tên công ty (không bắt buộc)</Label>
+          <Input
             id="companyName"
             name="companyName"
             type="text"
+            className="h-12"
             autoComplete="organization"
             maxLength={120}
           />
@@ -201,72 +342,97 @@ export function RegistrationForm() {
         </div>
 
         <div className="field-group">
-          <label htmlFor="dateOfBirth">Ngày sinh (không bắt buộc)</label>
-          <input
-            id="dateOfBirth"
-            name="dateOfBirth"
-            type="date"
-            autoComplete="bday"
-          />
-          <FieldError errors={fieldErrors?.dateOfBirth} />
-        </div>
-
-        <div className="field-group">
-          <label htmlFor="password">Mật khẩu</label>
-          <input
-            id="password"
-            name="password"
-            type={showPassword ? "text" : "password"}
-            autoComplete="new-password"
-            minLength={12}
-            maxLength={128}
-            required
-          />
-          <small>Từ 12 đến 128 ký tự.</small>
+          <Label htmlFor="password">
+            Mật khẩu<RequiredIndicator />
+          </Label>
+          <div className="password-input">
+            <Input
+              id="password"
+              name="password"
+              type={isPasswordVisible ? "text" : "password"}
+              className="h-12 pr-12"
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={128}
+              required
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="password-visibility-toggle"
+              type="button"
+              aria-label={isPasswordVisible ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+              aria-pressed={isPasswordVisible}
+              onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
+            >
+              <PasswordVisibilityIcon isVisible={isPasswordVisible} />
+            </Button>
+          </div>
+          <small className="password-help">Từ 12 đến 128 ký tự.</small>
           <FieldError errors={fieldErrors?.password} />
         </div>
 
         <div className="field-group">
-          <label htmlFor="confirmPassword">Xác nhận mật khẩu</label>
-          <input
-            id="confirmPassword"
-            name="confirmPassword"
-            type={showPassword ? "text" : "password"}
-            autoComplete="new-password"
-            minLength={12}
-            maxLength={128}
-            required
-          />
+          <Label htmlFor="confirmPassword">
+            Xác nhận mật khẩu<RequiredIndicator />
+          </Label>
+          <div className="password-input">
+            <Input
+              id="confirmPassword"
+              name="confirmPassword"
+              type={isConfirmPasswordVisible ? "text" : "password"}
+              className="h-12 pr-12"
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={128}
+              required
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="password-visibility-toggle"
+              type="button"
+              aria-label={
+                isConfirmPasswordVisible
+                  ? "Ẩn xác nhận mật khẩu"
+                  : "Hiện xác nhận mật khẩu"
+              }
+              aria-pressed={isConfirmPasswordVisible}
+              onClick={() =>
+                setIsConfirmPasswordVisible((isVisible) => !isVisible)
+              }
+            >
+              <PasswordVisibilityIcon isVisible={isConfirmPasswordVisible} />
+            </Button>
+          </div>
+          <small className="password-help" aria-hidden="true" />
           <FieldError errors={fieldErrors?.confirmPassword} />
         </div>
+
+        <BirthYearField errors={fieldErrors?.birthYear} />
       </div>
 
-      <label className="check-row">
-        <input
-          type="checkbox"
-          checked={showPassword}
-          onChange={(event) => setShowPassword(event.target.checked)}
-        />
-        Hiện mật khẩu
-      </label>
-
       <div className="consent-group">
-        <label className="check-row">
-          <input name="acceptTerms" type="checkbox" required />
-          Tôi đồng ý với Điều khoản sử dụng.
-        </label>
+        <Label className="check-row">
+          <Checkbox name="acceptTerms" required />
+          <span>
+            Tôi đồng ý với Điều khoản sử dụng.<RequiredIndicator />
+          </span>
+        </Label>
         <FieldError errors={fieldErrors?.acceptTerms} />
 
-        <label className="check-row">
-          <input name="acceptPrivacy" type="checkbox" required />
-          Tôi đồng ý với Chính sách bảo mật.
-        </label>
+        <Label className="check-row">
+          <Checkbox name="acceptPrivacy" required />
+          <span>
+            Tôi đồng ý với Chính sách bảo mật.<RequiredIndicator />
+          </span>
+        </Label>
         <FieldError errors={fieldErrors?.acceptPrivacy} />
 
-        <label className="check-row">
-          <input name="marketingEmailConsent" type="checkbox" />
+        <Label className="check-row">
+          <Checkbox name="marketingEmailConsent" />
           Tôi muốn nhận thông tin sản phẩm và tư vấn từ AHSO.
-        </label>
+        </Label>
       </div>
 
       {message ? (
@@ -278,12 +444,12 @@ export function RegistrationForm() {
         </div>
       ) : null}
 
-      <button
-        className="primary-button primary-button--full"
+      <Button
+        className="h-12 w-full"
         disabled={isPending}
       >
         {isPending ? "Đang tạo tài khoản..." : "Đăng ký và nhận OTP"}
-      </button>
+      </Button>
 
       <p className="form-footnote">
         Đã có tài khoản? <Link href="/login">Đăng nhập</Link>

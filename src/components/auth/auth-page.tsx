@@ -1,18 +1,21 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function AuthPage({
-  eyebrow,
   title,
-  description,
   children,
   wide = false,
 }: {
-  eyebrow: string;
   title: string;
-  description: string;
   children: ReactNode;
   wide?: boolean;
 }) {
@@ -20,23 +23,23 @@ export function AuthPage({
     <main className="login-shell">
       <div className="login-topbar">
         <Link className="brand" href="/">
-          <span className="brand-mark" aria-hidden="true">
-            A
-          </span>
+          <BrandLogo />
           <span>AHSO Warehouse</span>
         </Link>
         <ThemeToggle />
       </div>
 
-      <section
+      <Card
         className={`login-panel${wide ? " login-panel--wide" : ""}`}
         aria-labelledby="auth-heading"
       >
-        <p className="eyebrow">{eyebrow}</p>
-        <h1 id="auth-heading">{title}</h1>
-        <p>{description}</p>
-        {children}
-      </section>
+        <CardHeader>
+          <CardTitle id="auth-heading" className="text-4xl tracking-tight sm:text-5xl">
+            {title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>{children}</CardContent>
+      </Card>
     </main>
   );
 }

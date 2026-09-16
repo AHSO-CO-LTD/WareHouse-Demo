@@ -14,9 +14,7 @@ export default async function LoginPage({
 
   return (
     <AuthPage
-      eyebrow="Tài khoản AHSO"
-      title="Chào mừng trở lại."
-      description="Dùng email đã đăng ký để truy cập bản demo hoặc khu vực quản trị."
+      title="Đăng nhập"
     >
       <LoginForm
         notice={

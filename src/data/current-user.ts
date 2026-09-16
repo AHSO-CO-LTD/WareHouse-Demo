@@ -21,7 +21,7 @@ export const getCurrentUser = cache(async () => {
     emailVerified: session.user.emailVerified,
     phoneNumber: session.user.phoneNumber ?? null,
     companyName: session.user.companyName ?? null,
-    dateOfBirth: session.user.dateOfBirth ?? null,
+    birthYear: session.user.birthYear ?? null,
     marketingEmailConsent: session.user.marketingEmailConsent,
     mustChangePassword: session.user.mustChangePassword,
     role: session.user.role ?? null,

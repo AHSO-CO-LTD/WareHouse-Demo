@@ -1,7 +1,28 @@
 "use client";
 
 import { FormEvent, useRef, useState } from "react";
+import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { authClient } from "@/lib/auth/client";
 import { AUTH_ROLES, type AuthRole } from "@/lib/auth/platform-access";
 
@@ -18,17 +39,20 @@ export function PlatformAccountForm() {
   const [isPending, setIsPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
+  const [role, setRole] = useState<AccountDraft["role"]>(
+    AUTH_ROLES.PLATFORM_ADMIN,
+  );
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage(null);
 
     const formData = new FormData(event.currentTarget);
-    const role = String(formData.get("role"));
+    const submittedRole = String(formData.get("role"));
 
     if (
-      role !== AUTH_ROLES.PLATFORM_DEV &&
-      role !== AUTH_ROLES.PLATFORM_ADMIN
+      submittedRole !== AUTH_ROLES.PLATFORM_DEV &&
+      submittedRole !== AUTH_ROLES.PLATFORM_ADMIN
     ) {
       setIsError(true);
       setMessage("Vai trò không hợp lệ.");
@@ -41,7 +65,7 @@ export function PlatformAccountForm() {
         .trim()
         .toLowerCase(),
       password: String(formData.get("password") ?? ""),
-      role,
+      role: submittedRole,
     });
   }
 
@@ -81,6 +105,8 @@ export function PlatformAccountForm() {
     setIsPending(false);
     setDraft(null);
     formRef.current?.reset();
+    setRole(AUTH_ROLES.PLATFORM_ADMIN);
+    toast.success("Đã tạo tài khoản platform.");
   }
 
   return (
@@ -92,43 +118,48 @@ export function PlatformAccountForm() {
       >
         <div className="form-grid">
           <div className="field-group">
-            <label htmlFor="platformName">Họ và tên</label>
-            <input
+            <Label htmlFor="platformName">Họ và tên</Label>
+            <Input
               id="platformName"
               name="name"
               type="text"
+              className="h-12"
               minLength={2}
               maxLength={100}
               required
             />
           </div>
           <div className="field-group">
-            <label htmlFor="platformEmail">Email đăng nhập</label>
-            <input
+            <Label htmlFor="platformEmail">Email đăng nhập</Label>
+            <Input
               id="platformEmail"
               name="email"
               type="email"
+              className="h-12"
               autoComplete="off"
               required
             />
           </div>
           <div className="field-group">
-            <label htmlFor="platformRole">Vai trò</label>
-            <select
-              id="platformRole"
-              name="role"
-              defaultValue={AUTH_ROLES.PLATFORM_ADMIN}
-            >
-              <option value={AUTH_ROLES.PLATFORM_ADMIN}>Platform ADMIN</option>
-              <option value={AUTH_ROLES.PLATFORM_DEV}>Platform DEV</option>
-            </select>
+            <Label htmlFor="platformRole">Vai trò</Label>
+            <input name="role" type="hidden" value={role} />
+            <Select value={role} onValueChange={(value) => setRole(value as AccountDraft["role"])}>
+              <SelectTrigger id="platformRole" className="h-12 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={AUTH_ROLES.PLATFORM_ADMIN}>Platform ADMIN</SelectItem>
+                <SelectItem value={AUTH_ROLES.PLATFORM_DEV}>Platform DEV</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div className="field-group">
-            <label htmlFor="platformPassword">Mật khẩu tạm thời</label>
-            <input
+            <Label htmlFor="platformPassword">Mật khẩu tạm thời</Label>
+            <Input
               id="platformPassword"
               name="password"
               type="password"
+              className="h-12"
               autoComplete="new-password"
               minLength={12}
               maxLength={128}
@@ -146,45 +177,28 @@ export function PlatformAccountForm() {
           </p>
         ) : null}
 
-        <button className="primary-button" type="submit">
-          Tạo tài khoản platform
-        </button>
+        <Button className="h-12" type="submit">
+          Tạo tài khoản Platform
+        </Button>
       </form>
 
       {draft ? (
-        <div className="dialog-backdrop" role="presentation">
-          <div
-            className="confirmation-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="create-account-title"
-          >
-            <p className="eyebrow">Xác nhận thao tác nhạy cảm</p>
-            <h2 id="create-account-title">Tạo {draft.role}?</h2>
-            <p>
-              Tài khoản <strong>{draft.email}</strong> sẽ được xác minh sẵn và
-              bắt buộc đổi mật khẩu khi đăng nhập lần đầu.
-            </p>
-            <div className="dialog-actions">
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() => setDraft(null)}
-                disabled={isPending}
-              >
-                Hủy
-              </button>
-              <button
-                className="primary-button"
-                type="button"
-                onClick={confirmCreate}
-                disabled={isPending}
-              >
+        <AlertDialog open onOpenChange={(open) => !open && setDraft(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Tạo {draft.role}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tài khoản <strong>{draft.email}</strong> sẽ được xác minh sẵn và bắt buộc đổi mật khẩu khi đăng nhập lần đầu.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPending}>Hủy</AlertDialogCancel>
+              <AlertDialogAction disabled={isPending} onClick={confirmCreate}>
                 {isPending ? "Đang tạo..." : "Xác nhận tạo"}
-              </button>
-            </div>
-          </div>
-        </div>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       ) : null}
     </>
   );

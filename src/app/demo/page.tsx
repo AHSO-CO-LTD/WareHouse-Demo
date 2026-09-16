@@ -1,14 +1,41 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/data/current-user";
 import { AUTH_ROLES } from "@/lib/auth/platform-access";
 import { db } from "@/lib/server/db";
+import { getWorkspaceAccessState } from "@/lib/server/workspace-lifecycle";
 
 export const metadata = {
   title: "Kho demo | AHSO Warehouse",
 };
+
+const dateFormatter = new Intl.DateTimeFormat("vi-VN", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+function getStatusLabel(status: string): string {
+  switch (status) {
+    case "ACTIVE":
+      return "Đang hoạt động";
+    case "READ_ONLY":
+      return "Chỉ xem";
+    case "PURGE_PENDING":
+      return "Chờ xóa";
+    case "PURGED":
+      return "Đã kết thúc";
+    default:
+      return "Chưa khởi tạo";
+  }
+}
 
 export default async function DemoPage() {
   const user = await getCurrentUser();
@@ -31,6 +58,7 @@ export default async function DemoPage() {
       displayName: true,
       status: true,
       expiresAt: true,
+      purgeAt: true,
     },
   });
 
@@ -38,13 +66,14 @@ export default async function DemoPage() {
     redirect("/onboarding");
   }
 
+  const access = getWorkspaceAccessState(workspace);
+  const isActive = access.status === "ACTIVE";
+
   return (
     <main className="app-placeholder-shell">
       <header className="app-placeholder-header">
         <div>
-          <span className="brand-mark" aria-hidden="true">
-            A
-          </span>
+          <BrandLogo />
           <strong>{workspace.displayName}</strong>
         </div>
         <div className="header-actions">
@@ -53,12 +82,25 @@ export default async function DemoPage() {
         </div>
       </header>
       <section className="app-placeholder-content">
-        <p className="eyebrow">Không gian demo đã sẵn sàng</p>
-        <h1>Nền tảng vận hành kho đang được xây dựng.</h1>
-        <p>
-          Bước nền đã kết nối tài khoản, workspace riêng, quota và vòng đời 30
-          ngày. Module kho sẽ được triển khai ở pha tiếp theo.
-        </p>
+        <h1>{isActive ? "Kho đang sẵn sàng." : "Kho ở chế độ xem."}</h1>
+        <Alert className="app-placeholder-status">
+          <AlertTitle className="flex items-center gap-3">
+            <Badge variant={isActive ? "default" : "outline"}>
+              {getStatusLabel(access.status)}
+            </Badge>
+            <span>{access.message}</span>
+          </AlertTitle>
+          <AlertDescription>
+            {isActive && workspace.expiresAt
+              ? `Dùng thử đến ${dateFormatter.format(workspace.expiresAt)}.`
+              : workspace.purgeAt
+                ? `Dữ liệu nghiệp vụ được xử lý theo chính sách vào ${dateFormatter.format(workspace.purgeAt)}.`
+                : null}
+          </AlertDescription>
+        </Alert>
+        <Button className="mt-6 h-12" asChild>
+          <Link href="/warehouse">Quản lý vị trí kho</Link>
+        </Button>
       </section>
     </main>
   );

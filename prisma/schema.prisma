@@ -15,7 +15,7 @@ model User {
   image                 String?
   phoneNumber           String?           @unique
   companyName           String?
-  dateOfBirth           DateTime?         @db.Date
+  birthYear             Int?
   termsAcceptedAt       DateTime?
   privacyAcceptedAt     DateTime?
   termsVersion          String?
@@ -46,6 +46,20 @@ enum WorkspaceStatus {
   READ_ONLY
   PURGE_PENDING
   PURGED
+}
+
+enum StorageClass {
+  LIGHT
+  MEDIUM
+  HEAVY
+}
+
+enum LocationCodeKind {
+  WAREHOUSE
+  ZONE
+  RACK
+  RACK_LEVEL
+  SLOT
 }
 
 enum AppLocale {
@@ -112,6 +126,12 @@ model Workspace {
   supportSessions SupportSession[]
   auditEvents     AuditLog[]
   emailDeliveries EmailDelivery[]
+  warehouses      Warehouse[]
+  zones           Zone[]
+  racks           Rack[]
+  rackLevels      RackLevel[]
+  slots           Slot[]
+  locationCodes   LocationCodeRegistry[]
 
   @@index([status, expiresAt])
   @@index([status, purgeAt])
@@ -139,6 +159,132 @@ model WorkspaceLimit {
   updatedAt                 DateTime  @updatedAt
 
   @@map("workspace_limit")
+}
+
+model Warehouse {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code         String
+  name         String
+  description  String?
+  storageClass StorageClass?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  zones Zone[]
+
+  @@unique([id, workspaceId])
+  @@unique([workspaceId, code])
+  @@unique([workspaceId, name])
+  @@index([workspaceId, createdAt])
+  @@map("warehouse")
+}
+
+model Zone {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  warehouseId  String        @db.Uuid
+  warehouse    Warehouse     @relation(fields: [warehouseId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code         String        
+  name         String
+  description  String?
+  storageClass StorageClass?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  racks Rack[]
+
+  @@unique([id, workspaceId])
+  @@unique([warehouseId, code])
+  @@unique([warehouseId, name])
+  @@index([workspaceId, warehouseId])
+  @@map("zone")
+}
+
+model Rack {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  zoneId       String        @db.Uuid
+  zone         Zone          @relation(fields: [zoneId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code         String
+  name         String
+  description  String?
+  storageClass StorageClass?
+  configuredLevelCount Int @default(1)
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  levels RackLevel[]
+
+  @@unique([id, workspaceId])
+  @@unique([zoneId, code])
+  @@unique([zoneId, name])
+  @@index([workspaceId, zoneId])
+  @@map("rack")
+}
+
+model RackLevel {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  rackId       String        @db.Uuid
+  rack         Rack          @relation(fields: [rackId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code         String
+  sequence     Int
+  name         String
+  storageClass StorageClass?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  slots Slot[]
+
+  @@unique([id, workspaceId])
+  @@unique([rackId, code])
+  @@unique([rackId, name])
+  @@unique([rackId, sequence])
+  @@index([workspaceId, rackId])
+  @@map("rack_level")
+}
+
+model LocationCodeRegistry {
+  workspaceId   String           @db.Uuid
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code          String
+  locationType  LocationCodeKind
+  locationId    String           @db.Uuid
+  createdAt     DateTime         @default(now())
+
+  @@id([workspaceId, code])
+  @@unique([workspaceId, locationType, locationId])
+  @@index([workspaceId, locationType])
+  @@map("location_code_registry")
+}
+
+model Slot {
+  id           String        @id @default(uuid()) @db.Uuid
+  workspaceId  String        @db.Uuid
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  rackLevelId  String        @db.Uuid
+  rackLevel    RackLevel     @relation(fields: [rackLevelId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code         String
+  name         String
+  storageClass StorageClass?
+  version      Int           @default(1)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([workspaceId, code])
+  @@unique([rackLevelId, code])
+  @@unique([rackLevelId, name])
+  @@index([workspaceId, rackLevelId])
+  @@map("slot")
 }
 
 model ConsentRecord {

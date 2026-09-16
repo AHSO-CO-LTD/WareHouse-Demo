@@ -1,25 +1,12 @@
-import { timingSafeEqual } from "node:crypto";
-
 import { getServerEnv } from "@/config/server-env";
 import { AUTH_ROLES } from "@/lib/auth/platform-access";
 import { db } from "@/lib/server/db";
-
-function hasValidJobSecret(request: Request, expectedSecret: string): boolean {
-  const authorization = request.headers.get("authorization") ?? "";
-  const expected = `Bearer ${expectedSecret}`;
-  const receivedBuffer = Buffer.from(authorization);
-  const expectedBuffer = Buffer.from(expected);
-
-  return (
-    receivedBuffer.length === expectedBuffer.length &&
-    timingSafeEqual(receivedBuffer, expectedBuffer)
-  );
-}
+import { hasValidInternalJobSecret } from "@/lib/server/internal-job";
 
 export async function POST(request: Request) {
   const env = getServerEnv();
 
-  if (!hasValidJobSecret(request, env.INTERNAL_JOB_SECRET)) {
+  if (!hasValidInternalJobSecret(request, env.INTERNAL_JOB_SECRET)) {
     return Response.json(
       {
         status: 401,
