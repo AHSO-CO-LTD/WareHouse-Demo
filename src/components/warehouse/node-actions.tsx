@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState, useTransition } from "react";
+import { FormEvent, useEffect, useEffectEvent, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -117,8 +117,14 @@ export function NodeActions({ kind, id, version, code, codePrefix, editRequest =
     if (nextEditing) resetEditingForm();
   }
 
+  const openRequestedEditor = useEffectEvent(() => {
+    handleEditingChange(true);
+  });
+
   useEffect(() => {
-    if (editRequest > 0) handleEditingChange(true);
+    if (editRequest <= 0) return;
+    const timeoutId = window.setTimeout(() => openRequestedEditor(), 0);
+    return () => window.clearTimeout(timeoutId);
   }, [editRequest]);
 
   function stageUpdate(event: FormEvent<HTMLFormElement>) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -27,6 +28,7 @@ export function SignOutButton({
   className,
   onPendingChange,
 }: SignOutButtonProps) {
+  const router = useRouter();
   const [isPending, setIsPending] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -46,7 +48,7 @@ export function SignOutButton({
 
       clearAppStorage(window.localStorage);
       clearAppStorage(window.sessionStorage);
-      window.location.assign("/login");
+      router.replace("/login");
     } catch {
       setErrorMessage("Không thể đăng xuất. Vui lòng thử lại.");
       toast.error("Không thể đăng xuất. Vui lòng thử lại.");

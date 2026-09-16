@@ -1,25 +1,40 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-export function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false);
+const THEME_CHANGE_EVENT = "ahso-theme-change";
 
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains("dark"));
-  }, []);
+function subscribeToTheme(onThemeChange: () => void) {
+  window.addEventListener(THEME_CHANGE_EVENT, onThemeChange);
+  return () => window.removeEventListener(THEME_CHANGE_EVENT, onThemeChange);
+}
+
+function getThemeSnapshot() {
+  return document.documentElement.classList.contains("dark");
+}
+
+function getServerThemeSnapshot() {
+  return false;
+}
+
+export function ThemeToggle() {
+  const isDark = useSyncExternalStore(subscribeToTheme, getThemeSnapshot, getServerThemeSnapshot);
 
   function toggleTheme() {
     const root = document.documentElement;
     const nextTheme = root.classList.contains("dark") ? "light" : "dark";
 
     root.classList.toggle("dark", nextTheme === "dark");
-    window.localStorage.setItem("ahso-theme", nextTheme);
-    setIsDark(nextTheme === "dark");
+    try {
+      window.localStorage.setItem("ahso-theme", nextTheme);
+    } catch {
+      // The current session can still use the selected theme if storage is unavailable.
+    }
+    window.dispatchEvent(new Event(THEME_CHANGE_EVENT));
   }
 
   return (
