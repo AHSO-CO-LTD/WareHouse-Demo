@@ -193,8 +193,8 @@ Demo là sandbox dùng thử 30 ngày. Product production sau ký hợp đồng 
 | 0     | Scaffold, project docs, ADRs, environment schema                           | Done        |
 | 1     | PostgreSQL schema foundation, auth, onboarding, tenant isolation           | In Progress |
 | 2     | Demo lifecycle, quotas, seed/reset, platform accounts                      | In Progress |
-| 3     | Warehouse hierarchy, products, units, lots, QR                             | In Progress |
-| 4     | Inventory ledger and all core stock workflows                              | Pending     |
+| 3     | Warehouse hierarchy, products, units, lots, QR                             | Complete — user accepted |
+| 4     | Inventory ledger and all core stock workflows                              | In Progress — Phase 4A |
 | 5     | Projects, CRM, estimates, quotations, VAT, bilingual PDF                   | Pending     |
 | 6     | Dashboards, audit, email center, consultation pipeline                     | Pending     |
 | 7     | Scaled 2D Warehouse Layout Designer                                        | Pending     |
@@ -228,10 +228,30 @@ Inventory core must stabilize before layout editing begins. The layout phase may
 ### Phase 3A warehouse hierarchy amendment — 16/09/2026
 
 - Done in source: tenant-scoped `Warehouse → Zone → Rack → RackLevel → Slot` schema, Prisma migration and direct tree-management screen.
+- Done in source: QR popup for each rack and slot; the QR payload is exactly that location's generated code, with no inventory lookup or scan workflow.
 - Done in source: demo quotas, active-workspace write guard, restrictive child removal, storage-class inheritance, serializable writes with bounded retry, optimistic version checks and same-transaction audit entries.
 - Done in source: workspace lifecycle purge removes the implemented warehouse hierarchy child-first before the terminal lifecycle audit entry.
 - Done: applied the hierarchy migrations, including workspace-wide location-code registry, to the configured PostgreSQL database.
 - Pending: run tenant isolation, quota/concurrency, lifecycle purge and Light/Dark UI verification.
+
+### Phase 3B product catalog amendment — 17/09/2026
+
+- Done in source: tenant-isolated products, units, Decimal unit conversions, generated lots and immutable cost-history models.
+- Done in source: server-side active-workspace guard, product quota, optimistic updates, atomic audit/history writes and safe dependency-aware deletion.
+- Done in source: `/products` catalog management screen for units, products, conversions and lots; lots intentionally have no quantity or slot assignment.
+- Done: catalog migration applied to the configured PostgreSQL database.
+- Done in source: unit codes are generated server-side as immutable `UOM-001…`; users enter only the display name.
+- Done in source: correct lifecycle semantics so day 30 only locks writes and terminal `PURGED` deletes catalog plus warehouse data child-first.
+- Accepted by user: Phase 3 requirements are complete. Automated typecheck, lint, catalog runtime, tenant-isolation, quota/concurrency and lifecycle-purge verification are not recorded for the latest checkout.
+
+### Phase 4A inventory foundation amendment — 17/09/2026
+
+- Done in source: tenant-scoped immutable inventory documents, lines, ledger entries and slot balances for opening, receipt and issue operations.
+- Done in source: `/inventory` has a balance/recent-document view and multi-line shadcn dialogs with confirmation, idempotency and unsaved-draft protection.
+- Done in source: active-workspace, quota, scoped-resource, Decimal conversion snapshot, non-negative issue update, serializable transaction and audit safeguards.
+- Done: the additive inventory migration has been applied to the configured local PostgreSQL database.
+- Done in source: lifecycle purge and catalog/location deletion now respect inventory history dependencies.
+- Pending: typecheck, lint, posting workflow, concurrency and cross-workspace isolation verification.
 
 ## 10. Verification plan
 

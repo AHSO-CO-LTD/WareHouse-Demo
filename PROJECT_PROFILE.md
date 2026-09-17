@@ -2,7 +2,7 @@
 
 ## Project
 
-- Trạng thái: Đang triển khai. Foundation/auth, lifecycle và Phase 3A warehouse hierarchy đã có trong source; hierarchy migrations đã áp dụng, còn xác minh runtime/UI.
+- Trạng thái: Đang triển khai. Foundation/auth, lifecycle, hierarchy, catalog và Phase 4A inventory foundation đã có trong source; các migration hiện có đã áp dụng, còn xác minh runtime/UI.
 - Mục đích: Sản phẩm web demo công khai để người dùng trải nghiệm quản lý kho và gửi yêu cầu tư vấn cho AHSO.
 - Bài toán: Thay thế cách quản lý nhập, xuất, tồn, kiểm kê và vị trí kho thủ công bằng Excel trong một môi trường dùng thử có kiểm soát.
 - Môi trường: Web public triển khai trên VPS, sử dụng qua desktop và trình duyệt di động.
@@ -70,7 +70,8 @@
 ## Warehouse domain
 
 - Cấu trúc: `Kho → Phân khu → Kệ → Tầng kệ → Slot`.
-- Phase 3A source đã có hierarchy tenant-scoped, quota, audit, lifecycle write guard và direct tree management. Kệ giữ số vị trí tầng cấu hình riêng với các tầng đang tồn tại; các tầng/ô được tạo tự động bằng mã dẫn xuất từ mã kệ. Xóa tầng trống có thể đôn các tầng trống phía trên, còn chuyển/đổi tầng là thao tác xác nhận riêng. QR, products, lots and inventory remain later Phase 3/4 work.
+- Phase 3A source đã có hierarchy tenant-scoped, quota, audit, lifecycle write guard và direct tree management. Kệ giữ số vị trí tầng cấu hình riêng với các tầng đang tồn tại; các tầng/ô được tạo tự động bằng mã dẫn xuất từ mã kệ. Xóa tầng trống có thể đôn các tầng trống phía trên, còn chuyển/đổi tầng là thao tác xác nhận riêng.
+- Phase 3B có catalog tenant-scoped cho sản phẩm, đơn vị, quy đổi, lô và lịch sử giá vốn. Phase 4A gắn catalog vào phiếu/số dư theo slot bằng sổ cái bất biến; QR là tiện ích nhận diện vị trí.
 - Mã vị trí được chuẩn hóa chữ hoa và unique xuyên toàn bộ năm cấp trong một workspace; tầng kệ có cả mã unique và số thứ tự unique trong kệ.
 - Tên vị trí unique trong phạm vi cấp cha trực tiếp; cùng tên được phép ở hai nhánh khác nhau.
 - Tồn chi tiết: `Sản phẩm + lô + slot + trạng thái + số lượng`.
@@ -81,6 +82,7 @@
 ## Product and costing
 
 - Mỗi sản phẩm có mã nội bộ duy nhất, đơn vị cơ sở và bộ quy đổi tùy chọn.
+- Product code/name và unit code/name unique trong workspace; mã đơn vị được tự sinh theo `UOM-001…` và bất biến; quota 20 sản phẩm được kiểm tra phía server trong transaction.
 - Barcode/QR bên ngoài là tùy chọn.
 - Lô có mã nội bộ tự sinh, mã nhà cung cấp tùy chọn và hạn sử dụng tùy sản phẩm/lô.
 - Mỗi mã sản phẩm có một giá vốn hiện hành trên toàn kho.
@@ -89,12 +91,10 @@
 
 ## Inventory operations
 
-- Tồn đầu kỳ, nhập, xuất, điều chuyển hai bước, kiểm kê mù, điều chỉnh, đảo giao dịch và giữ hàng.
-- Xuất cho dự án là tùy chọn; lý do xuất luôn bắt buộc.
-- FEFO là gợi ý cho hàng có hạn sử dụng; FIFO cho hàng không có hạn.
-- Trạng thái tồn: khả dụng, đang giữ, đang điều chuyển, cách ly, hư hỏng và hết hạn.
-- Hàng hết hạn bị chặn xuất thông thường; override cần quyền, lý do và audit đầy đủ.
-- Mỗi lệnh giữ hàng bắt buộc có ngày hết hạn và không được vượt tồn khả dụng.
+- Phase 4A có tồn đầu kỳ, nhập và xuất nhiều dòng. Điều chuyển hai bước, kiểm kê mù, điều chỉnh, đảo giao dịch và giữ hàng là phase sau.
+- Mỗi dòng đã ghi snapshot đơn vị nhập, hệ số quy đổi, số lượng đơn vị cơ sở và giá vốn hiện hành; số dư hiện tại theo `workspace + product + lot + slot + AVAILABLE`.
+- Phiếu và sổ cái đã ghi là bất biến; Phase 4A chưa có chứng từ đảo/điều chỉnh.
+- FEFO/FIFO, trạng thái giữ/điều chuyển/cách ly/hư hỏng/hết hạn, xuất cho dự án và lý do xuất là phạm vi sau Phase 4A.
 
 ## Location classification
 

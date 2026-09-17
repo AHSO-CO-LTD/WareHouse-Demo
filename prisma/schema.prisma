@@ -8,33 +8,35 @@ datasource db {
 }
 
 model User {
-  id                    String            @id
+  id                    String               @id
   name                  String
   email                 String
-  emailVerified         Boolean           @default(false)
+  emailVerified         Boolean              @default(false)
   image                 String?
-  phoneNumber           String?           @unique
+  phoneNumber           String?              @unique
   companyName           String?
   birthYear             Int?
   termsAcceptedAt       DateTime?
   privacyAcceptedAt     DateTime?
   termsVersion          String?
   privacyVersion        String?
-  marketingEmailConsent Boolean           @default(false)
-  mustChangePassword    Boolean           @default(false)
-  createdAt             DateTime          @default(now())
-  updatedAt             DateTime          @updatedAt
+  marketingEmailConsent Boolean              @default(false)
+  mustChangePassword    Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
   role                  String?
-  banned                Boolean?          @default(false)
+  banned                Boolean?             @default(false)
   banReason             String?
   banExpires            DateTime?
   sessions              Session[]
   accounts              Account[]
   workspace             Workspace?
-  supportStarts         SupportSession[]  @relation("SupportActor")
-  auditEvents           AuditLog[]        @relation("AuditActor")
-  settingEdits          PlatformSetting[] @relation("SettingEditor")
+  supportStarts         SupportSession[]     @relation("SupportActor")
+  auditEvents           AuditLog[]           @relation("AuditActor")
+  settingEdits          PlatformSetting[]    @relation("SettingEditor")
   emailDeliveries       EmailDelivery[]
+  productCostChanges    ProductCostHistory[] @relation("ProductCostChangeActor")
+  inventoryDocuments    InventoryDocument[]  @relation("InventoryDocumentActor")
 
   @@unique([email])
   @@map("user")
@@ -52,6 +54,21 @@ enum StorageClass {
   LIGHT
   MEDIUM
   HEAVY
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum InventoryDocumentType {
+  OPENING
+  RECEIPT
+  ISSUE
+}
+
+enum InventoryBalanceStatus {
+  AVAILABLE
 }
 
 enum LocationCodeKind {
@@ -121,17 +138,25 @@ model Workspace {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
-  limits          WorkspaceLimit?
-  consents        ConsentRecord[]
-  supportSessions SupportSession[]
-  auditEvents     AuditLog[]
-  emailDeliveries EmailDelivery[]
-  warehouses      Warehouse[]
-  zones           Zone[]
-  racks           Rack[]
-  rackLevels      RackLevel[]
-  slots           Slot[]
-  locationCodes   LocationCodeRegistry[]
+  limits             WorkspaceLimit?
+  consents           ConsentRecord[]
+  supportSessions    SupportSession[]
+  auditEvents        AuditLog[]
+  emailDeliveries    EmailDelivery[]
+  warehouses         Warehouse[]
+  zones              Zone[]
+  racks              Rack[]
+  rackLevels         RackLevel[]
+  slots              Slot[]
+  locationCodes      LocationCodeRegistry[]
+  units              Unit[]
+  products           Product[]
+  inventoryLots      InventoryLot[]
+  productCostHistory ProductCostHistory[]
+  inventoryDocuments InventoryDocument[]
+  inventoryLines     InventoryDocumentLine[]
+  inventoryLedger    InventoryLedgerEntry[]
+  inventoryBalances  InventoryBalance[]
 
   @@index([status, expiresAt])
   @@index([status, purgeAt])
@@ -188,7 +213,7 @@ model Zone {
   workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   warehouseId  String        @db.Uuid
   warehouse    Warehouse     @relation(fields: [warehouseId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
-  code         String        
+  code         String
   name         String
   description  String?
   storageClass StorageClass?
@@ -206,19 +231,19 @@ model Zone {
 }
 
 model Rack {
-  id           String        @id @default(uuid()) @db.Uuid
-  workspaceId  String        @db.Uuid
-  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  zoneId       String        @db.Uuid
-  zone         Zone          @relation(fields: [zoneId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
-  code         String
-  name         String
-  description  String?
-  storageClass StorageClass?
-  configuredLevelCount Int @default(1)
-  version      Int           @default(1)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id                   String        @id @default(uuid()) @db.Uuid
+  workspaceId          String        @db.Uuid
+  workspace            Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  zoneId               String        @db.Uuid
+  zone                 Zone          @relation(fields: [zoneId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  code                 String
+  name                 String
+  description          String?
+  storageClass         StorageClass?
+  configuredLevelCount Int           @default(1)
+  version              Int           @default(1)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
 
   levels RackLevel[]
 
@@ -254,12 +279,12 @@ model RackLevel {
 }
 
 model LocationCodeRegistry {
-  workspaceId   String           @db.Uuid
-  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  code          String
-  locationType  LocationCodeKind
-  locationId    String           @db.Uuid
-  createdAt     DateTime         @default(now())
+  workspaceId  String           @db.Uuid
+  workspace    Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code         String
+  locationType LocationCodeKind
+  locationId   String           @db.Uuid
+  createdAt    DateTime         @default(now())
 
   @@id([workspaceId, code])
   @@unique([workspaceId, locationType, locationId])
@@ -280,11 +305,228 @@ model Slot {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  inventoryLines    InventoryDocumentLine[]
+  inventoryLedger   InventoryLedgerEntry[]
+  inventoryBalances InventoryBalance[]
+
   @@unique([workspaceId, code])
+  @@unique([id, workspaceId])
   @@unique([rackLevelId, code])
   @@unique([rackLevelId, name])
   @@index([workspaceId, rackLevelId])
   @@map("slot")
+}
+
+model Unit {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @db.Uuid
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sequence    Int
+  code        String
+  name        String
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  baseProducts   Product[]               @relation("ProductBaseUnit")
+  conversions    ProductUnitConversion[]
+  inventoryLines InventoryDocumentLine[]
+
+  @@unique([id, workspaceId])
+  @@unique([workspaceId, sequence])
+  @@unique([workspaceId, code])
+  @@unique([workspaceId, name])
+  @@index([workspaceId, createdAt])
+  @@map("unit")
+}
+
+model Product {
+  id          String        @id @default(uuid()) @db.Uuid
+  workspaceId String        @db.Uuid
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  description String?
+  barcode     String?
+  status      ProductStatus @default(ACTIVE)
+  baseUnitId  String        @db.Uuid
+  baseUnit    Unit          @relation("ProductBaseUnit", fields: [baseUnitId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  currentCost Decimal       @default(0) @db.Decimal(18, 2)
+  version     Int           @default(1)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  conversions       ProductUnitConversion[]
+  lots              InventoryLot[]
+  costHistory       ProductCostHistory[]
+  inventoryLines    InventoryDocumentLine[]
+  inventoryLedger   InventoryLedgerEntry[]
+  inventoryBalances InventoryBalance[]
+
+  @@unique([id, workspaceId])
+  @@unique([workspaceId, code])
+  @@unique([workspaceId, name])
+  @@unique([workspaceId, barcode])
+  @@index([workspaceId, status, createdAt])
+  @@map("product")
+}
+
+model ProductUnitConversion {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @db.Uuid
+  productId   String   @db.Uuid
+  product     Product  @relation(fields: [productId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  unitId      String   @db.Uuid
+  unit        Unit     @relation(fields: [unitId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  factor      Decimal  @db.Decimal(24, 8)
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([productId, unitId])
+  @@index([workspaceId, productId])
+  @@map("product_unit_conversion")
+}
+
+model InventoryLot {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @db.Uuid
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productId       String    @db.Uuid
+  product         Product   @relation(fields: [productId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  sequence        Int
+  code            String
+  supplierLotCode String?
+  manufacturedAt  DateTime? @db.Date
+  expiresAt       DateTime? @db.Date
+  version         Int       @default(1)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  inventoryLines    InventoryDocumentLine[]
+  inventoryLedger   InventoryLedgerEntry[]
+  inventoryBalances InventoryBalance[]
+
+  @@unique([id, workspaceId])
+  @@unique([workspaceId, code])
+  @@unique([productId, sequence])
+  @@index([workspaceId, productId, expiresAt])
+  @@map("inventory_lot")
+}
+
+model InventoryDocument {
+  id             String                @id @default(uuid()) @db.Uuid
+  workspaceId    String                @db.Uuid
+  workspace      Workspace             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sequence       Int
+  code           String
+  type           InventoryDocumentType
+  idempotencyKey String
+  actorUserId    String
+  actor          User                  @relation("InventoryDocumentActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  postedAt       DateTime              @default(now())
+  createdAt      DateTime              @default(now())
+
+  lines InventoryDocumentLine[]
+
+  @@unique([id, workspaceId])
+  @@unique([workspaceId, sequence])
+  @@unique([workspaceId, code])
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, type, postedAt])
+  @@map("inventory_document")
+}
+
+model InventoryDocumentLine {
+  id               String            @id @default(uuid()) @db.Uuid
+  workspaceId      String            @db.Uuid
+  workspace        Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documentId       String            @db.Uuid
+  document         InventoryDocument @relation(fields: [documentId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  lineNumber       Int
+  productId        String            @db.Uuid
+  product          Product           @relation(fields: [productId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  lotId            String?           @db.Uuid
+  lot              InventoryLot?     @relation(fields: [lotId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  slotId           String            @db.Uuid
+  slot             Slot              @relation(fields: [slotId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  inputUnitId      String            @db.Uuid
+  inputUnit        Unit              @relation(fields: [inputUnitId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  inputUnitCode    String
+  inputUnitName    String
+  conversionFactor Decimal           @db.Decimal(24, 8)
+  inputQuantity    Decimal           @db.Decimal(24, 8)
+  baseQuantity     Decimal           @db.Decimal(24, 8)
+  unitCost         Decimal           @db.Decimal(18, 2)
+  createdAt        DateTime          @default(now())
+
+  ledgerEntry InventoryLedgerEntry?
+
+  @@unique([id, workspaceId])
+  @@unique([documentId, lineNumber])
+  @@index([workspaceId, productId, slotId])
+  @@map("inventory_document_line")
+}
+
+model InventoryLedgerEntry {
+  id                 BigInt                 @id @default(autoincrement())
+  workspaceId        String                 @db.Uuid
+  workspace          Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  documentLineId     String                 @db.Uuid
+  documentLine       InventoryDocumentLine  @relation(fields: [documentLineId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  productId          String                 @db.Uuid
+  product            Product                @relation(fields: [productId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  lotId              String?                @db.Uuid
+  lot                InventoryLot?          @relation(fields: [lotId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  slotId             String                 @db.Uuid
+  slot               Slot                   @relation(fields: [slotId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  status             InventoryBalanceStatus @default(AVAILABLE)
+  signedBaseQuantity Decimal                @db.Decimal(24, 8)
+  occurredAt         DateTime               @default(now())
+
+  @@unique([documentLineId, workspaceId])
+  @@index([workspaceId, productId, lotId, slotId, occurredAt])
+  @@index([workspaceId, slotId, occurredAt])
+  @@map("inventory_ledger_entry")
+}
+
+model InventoryBalance {
+  id          String                 @id @default(uuid()) @db.Uuid
+  workspaceId String                 @db.Uuid
+  workspace   Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productId   String                 @db.Uuid
+  product     Product                @relation(fields: [productId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  lotId       String?                @db.Uuid
+  lot         InventoryLot?          @relation(fields: [lotId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  lotKey      String
+  slotId      String                 @db.Uuid
+  slot        Slot                   @relation(fields: [slotId, workspaceId], references: [id, workspaceId], onDelete: Restrict)
+  status      InventoryBalanceStatus @default(AVAILABLE)
+  quantity    Decimal                @default(0) @db.Decimal(24, 8)
+  version     Int                    @default(1)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@unique([workspaceId, productId, lotKey, slotId, status])
+  @@index([workspaceId, productId, status])
+  @@index([workspaceId, slotId, status])
+  @@map("inventory_balance")
+}
+
+model ProductCostHistory {
+  id           BigInt    @id @default(autoincrement())
+  workspaceId  String    @db.Uuid
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  productId    String    @db.Uuid
+  product      Product   @relation(fields: [productId, workspaceId], references: [id, workspaceId], onDelete: Cascade)
+  actorUserId  String?
+  actor        User?     @relation("ProductCostChangeActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  previousCost Decimal?  @db.Decimal(18, 2)
+  nextCost     Decimal   @db.Decimal(18, 2)
+  occurredAt   DateTime  @default(now())
+
+  @@index([workspaceId, productId, occurredAt])
+  @@map("product_cost_history")
 }
 
 model ConsentRecord {

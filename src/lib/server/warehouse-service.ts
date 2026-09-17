@@ -135,7 +135,12 @@ async function syncManagedSlots(
   });
 
   if (input.slotCount < slots.length) {
-    for (const slot of slots.slice(input.slotCount).reverse()) {
+    const removedSlots = slots.slice(input.slotCount);
+    const inventoryLineCount = await transaction.inventoryDocumentLine.count({
+      where: { workspaceId: input.workspaceId, slotId: { in: removedSlots.map((slot) => slot.id) } },
+    });
+    if (inventoryLineCount > 0) throw new WarehouseDomainError("SLOTS_HAVE_INVENTORY_HISTORY", "Không thể giảm số ô chứa khi ô cần xóa đã có lịch sử tồn kho.");
+    for (const slot of removedSlots.reverse()) {
       await releaseLocationCode(transaction, input.workspaceId, "slot", slot.id);
       await transaction.slot.delete({ where: { id: slot.id } });
     }
@@ -405,12 +410,15 @@ type PositionedLevel = {
   slots: Array<{ id: string; code: string; createdAt: Date }>;
 };
 
-async function levelsHaveProductAssignments(_transaction: Prisma.TransactionClient, _levelIds: string[]) {
-  // Product assignments are intentionally introduced in a later phase. Until then,
-  // every slot is considered product-empty and can be safely repositioned.
-  void _transaction;
-  void _levelIds;
-  return false;
+async function levelsHaveProductAssignments(transaction: Prisma.TransactionClient, levelIds: string[]) {
+  if (levelIds.length === 0) return false;
+  const count = await transaction.slot.count({
+    where: {
+      rackLevelId: { in: levelIds },
+      inventoryLines: { some: {} },
+    },
+  });
+  return count > 0;
 }
 
 async function removeLevelWithSlots(transaction: Prisma.TransactionClient, workspaceId: string, level: PositionedLevel) {
@@ -563,6 +571,10 @@ export async function deleteWarehouseNode(input: { actorUserId: string; kind: No
     const current = await rule.find();
     if (!current) throw new WarehouseDomainError("NODE_NOT_FOUND", "Không tìm thấy vị trí kho cần xóa.");
     if (await rule.children()) throw new WarehouseDomainError("NODE_HAS_CHILDREN", "Hãy xóa toàn bộ cấp con trước khi xóa vị trí này.");
+    if (input.kind === "slot") {
+      const inventoryLineCount = await tx.inventoryDocumentLine.count({ where: { workspaceId: workspace.id, slotId: input.id } });
+      if (inventoryLineCount > 0) throw new WarehouseDomainError("SLOT_HAS_INVENTORY_HISTORY", "Không thể xóa ô chứa đã có lịch sử tồn kho.");
+    }
     await releaseLocationCode(tx, workspace.id, input.kind, input.id);
     await rule.remove();
     await tx.auditLog.create({ data: { workspaceId: workspace.id, actorUserId: input.actorUserId, action: rule.action, resource: rule.resource, resourceId: input.id, result: "SUCCESS", before: { id: current.id, kind: input.kind } } });

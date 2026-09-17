@@ -125,13 +125,6 @@ async function lockWorkspace(
       return false;
     }
 
-    await transaction.locationCodeRegistry.deleteMany({ where: { workspaceId: workspace.id } });
-    await transaction.slot.deleteMany({ where: { workspaceId: workspace.id } });
-    await transaction.rackLevel.deleteMany({ where: { workspaceId: workspace.id } });
-    await transaction.rack.deleteMany({ where: { workspaceId: workspace.id } });
-    await transaction.zone.deleteMany({ where: { workspaceId: workspace.id } });
-    await transaction.warehouse.deleteMany({ where: { workspaceId: workspace.id } });
-
     await transaction.auditLog.create({
       data: {
         workspaceId: workspace.id,
@@ -211,6 +204,22 @@ async function completeWorkspacePurge(
       return false;
     }
 
+    await transaction.inventoryLedgerEntry.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.inventoryBalance.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.inventoryDocumentLine.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.inventoryDocument.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.productCostHistory.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.inventoryLot.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.productUnitConversion.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.product.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.unit.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.locationCodeRegistry.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.slot.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.rackLevel.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.rack.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.zone.deleteMany({ where: { workspaceId: workspace.id } });
+    await transaction.warehouse.deleteMany({ where: { workspaceId: workspace.id } });
+
     await transaction.auditLog.create({
       data: {
         workspaceId: workspace.id,
@@ -222,7 +231,7 @@ async function completeWorkspacePurge(
         after: { status: "PURGED", purgedAt: now.toISOString() },
         metadata: {
           source: "workspace-lifecycle-job",
-          domainDataPurge: "warehouse-hierarchy",
+          domainDataPurge: "warehouse-hierarchy-product-catalog-and-inventory",
         },
       },
     });

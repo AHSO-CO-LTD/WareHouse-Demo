@@ -11,6 +11,7 @@ type LocationRowProps = {
   name: string;
   summary?: string;
   hasChildren?: boolean;
+  utility?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
 };
@@ -22,6 +23,7 @@ export function LocationRow({
   name,
   summary,
   hasChildren = false,
+  utility,
   actions,
   children,
 }: LocationRowProps) {
@@ -58,8 +60,9 @@ export function LocationRow({
           </div>
         </div>}
         {summary ? <span className="warehouse-node-summary">{summary}</span> : null}
-        {hasChildren || actions ? <div className="warehouse-node-controls" onClick={(event) => event.stopPropagation()}>
+        {hasChildren || utility || actions ? <div className="warehouse-node-controls" onClick={(event) => event.stopPropagation()}>
           {hasChildren ? <Button aria-expanded={isExpanded} className="h-12 warehouse-toggle-button" onClick={() => setIsExpanded((current) => !current)} type="button" variant="outline">{isExpanded ? "Thu gọn" : "Mở"}</Button> : null}
+          {utility}
           {actionsWithEditRequest}
         </div> : null}
       </div>
