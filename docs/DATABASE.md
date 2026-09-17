@@ -25,6 +25,12 @@
 
 `20260916170000_add_rack_configured_level_count` stores each rack's available level positions independently of the currently existing `RackLevel` rows. It backfills the highest existing position, preserving deliberate empty positions after a level is deleted.
 
+`20260917021352_add_product_catalog` adds workspace-scoped `unit`, `product`, `product_unit_conversion`, `inventory_lot` and immutable `product_cost_history` records. Product code/name and unit code/name are unique per workspace; current cost and conversion factors use PostgreSQL Decimal types. Lots have generated per-product sequences but no quantity or slot relation until the inventory ledger phase.
+
+`20260917023000_add_unit_sequence` adds a non-null, workspace-scoped unit sequence. Existing units are assigned a stable sequence from creation order without rewriting their codes; new units use immutable generated `UOM-001…` codes.
+
+`20260917040000_add_inventory_foundation` adds immutable inventory documents and lines, ledger entries, and current balances. Quantities retain eight Decimal places and balances are unique by workspace, product, optional-lot key, slot and status. Composite workspace foreign keys prevent a product, lot, unit or slot from another workspace being referenced by a stock record.
+
 The external identity pair `(providerId, accountId)` is unique. A user owns at most one workspace. Workspace limits are copied into a one-to-one snapshot so a future global policy change does not silently alter an existing demo.
 
 ## Lifecycle
@@ -46,8 +52,9 @@ The external identity pair `(providerId, accountId)` is unique. A user owns at m
 - Location names are unique within their direct parent. Database conflicts are mapped to an explicit domain validation message.
 - Rack layers and each layer's configured slot count are created and synchronized in the same serializable transaction. A rack keeps its configured level positions even if a middle level is removed. Empty levels can compact the levels above only while none has product assignments; explicit move/swap operations otherwise regenerate affected level/slot codes and registry records atomically.
 - At purge time, warehouse hierarchy data is deleted child-first in the same transaction that marks the workspace `PURGED`.
+- At the day-30 `READ_ONLY` transition no business data is deleted. At terminal purge, inventory ledger/balance/line/document records, catalog history/lots/conversions/products/units, and then hierarchy records are deleted child-first in the same transaction as the terminal audit entry.
 - Inventory quantity and money will use PostgreSQL decimal types, not floating point.
 
 ## Migration status
 
-All seven committed migrations have been applied successfully to the configured local PostgreSQL database. Application workflow and cross-workspace isolation still require dedicated runtime verification.
+All ten migration folders in the current checkout have been applied successfully to the configured local PostgreSQL database. Application workflow and cross-workspace isolation still require dedicated runtime verification.

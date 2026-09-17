@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 
-import { SignOutButton } from "@/components/auth/sign-out-button";
-import { BrandLogo } from "@/components/brand-logo";
 import { CreateNodeForm } from "@/components/warehouse/create-node-form";
 import { LocationEmptySlot } from "@/components/warehouse/location-empty-slot";
+import { LocationQrDialog } from "@/components/warehouse/location-qr-dialog";
 import { LocationRow } from "@/components/warehouse/location-row";
 import { NodeActions } from "@/components/warehouse/node-actions";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { WorkspaceNavbar } from "@/components/workspace-navbar";
 import { getCurrentUser } from "@/data/current-user";
 import { AUTH_ROLES } from "@/lib/auth/platform-access";
 import { db } from "@/lib/server/db";
@@ -57,10 +56,7 @@ export default async function WarehousePage() {
 
   return (
     <main className="app-placeholder-shell">
-      <header className="app-placeholder-header">
-        <div><BrandLogo /><strong>{workspace.displayName}</strong></div>
-        <div className="header-actions"><ThemeToggle /><SignOutButton /></div>
-      </header>
+      <WorkspaceNavbar workspaceName={workspace.displayName} />
       <section className="warehouse-page">
         <header className="warehouse-page-heading"><h1>Quản lý kho</h1><span className="warehouse-page-capacity">{capacityLabel(workspace.warehouses.length, workspace.limits?.warehouseLimit, "kho")}</span></header>
         {!access.writable ? (
@@ -108,6 +104,7 @@ export default async function WarehousePage() {
                         summary={capacityLabel(rack.levels.length, rack.configuredLevelCount, "tầng")}
                         hasChildren={rack.levels.length > 0}
                         type="Kệ"
+                        utility={<LocationQrDialog code={rack.code} label="kệ" />}
                         actions={access.writable ? <NodeActions kind="rack" id={rack.id} version={rack.version} code={rack.code} codePrefix={zone.code} name={rack.name} levelCount={rack.configuredLevelCount} levelLimit={limits?.levelsPerRackLimit} slotLimit={limits?.slotsPerLevelLimit} slotPlans={rack.levels.map((level) => ({ sequence: level.sequence, slotCount: level.slots.length }))} storageClass={rack.storageClass} inheritedStorageClass={zone.storageClass} label="kệ" /> : null}
                       >
                         {rack.levels.map((level) => (
@@ -128,6 +125,7 @@ export default async function WarehousePage() {
                                 level={4}
                                 name={slot.name}
                                 type="Ô chứa"
+                                utility={<LocationQrDialog code={slot.code} label="ô chứa" />}
                                 actions={access.writable ? <NodeActions kind="slot" id={slot.id} version={slot.version} code={slot.code} name={slot.name} storageClass={slot.storageClass} inheritedStorageClass={level.storageClass} label="ô chứa" /> : null}
                               />
                             ))}

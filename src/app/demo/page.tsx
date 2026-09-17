@@ -1,12 +1,8 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 
-import { SignOutButton } from "@/components/auth/sign-out-button";
-import { BrandLogo } from "@/components/brand-logo";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { WorkspaceNavbar } from "@/components/workspace-navbar";
 import { getCurrentUser } from "@/data/current-user";
 import { AUTH_ROLES } from "@/lib/auth/platform-access";
 import { db } from "@/lib/server/db";
@@ -71,16 +67,7 @@ export default async function DemoPage() {
 
   return (
     <main className="app-placeholder-shell">
-      <header className="app-placeholder-header">
-        <div>
-          <BrandLogo />
-          <strong>{workspace.displayName}</strong>
-        </div>
-        <div className="header-actions">
-          <ThemeToggle />
-          <SignOutButton />
-        </div>
-      </header>
+      <WorkspaceNavbar workspaceName={workspace.displayName} />
       <section className="app-placeholder-content">
         <h1>{isActive ? "Kho đang sẵn sàng." : "Kho ở chế độ xem."}</h1>
         <Alert className="app-placeholder-status">
@@ -98,9 +85,6 @@ export default async function DemoPage() {
                 : null}
           </AlertDescription>
         </Alert>
-        <Button className="mt-6 h-12" asChild>
-          <Link href="/warehouse">Quản lý vị trí kho</Link>
-        </Button>
       </section>
     </main>
   );
